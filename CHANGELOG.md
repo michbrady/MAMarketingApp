@@ -4,6 +4,40 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
 
 ## [Unreleased]
 
+### Fixed - April 8, 2026
+
+#### Frontend/Backend Field Mapping Issues 🔧
+- **Contact Creation Tags Bug**: Fixed `TypeError: .split is not a function` when creating contacts
+  - Backend now returns tags as array `["tag1", "tag2"]` instead of string `"tag1,tag2"`
+  - Updated frontend to handle both array and string formats
+  - File: `frontend/src/lib/api/contacts.ts` - mapBackendToFrontend()
+  - Commits: `ec7f397`, `5dc46ef`
+
+- **Contact ID Undefined Bug**: Fixed contact links showing `/contacts/undefined`
+  - Backend's `toCamelCase()` converts `ContactID` → `contactID` (capital D)
+  - Frontend was checking for `contactId` (lowercase d) - mismatch!
+  - Added `contactID` to ID field fallback chain
+  - File: `frontend/src/lib/api/contacts.ts` - line 25
+  - Commits: `5aa7089`, `41d2553`
+
+- **Documentation**: Created comprehensive field mapping reference
+  - File: `FRONTEND_BACKEND_MAPPING_ISSUES.md`
+  - Documents PascalCase → camelCase transformation rules
+  - Best practices for field mapping and type handling
+  - Testing checklist for new fields/entities
+
+#### Startup Scripts Enhanced 🚀
+- **Auto Browser Open**: start.bat now automatically opens http://localhost:3000
+- **Better Error Handling**: Exit codes and validation for Node.js/npm
+- **Reliable Directory Navigation**: Uses `%~dp0` for script location
+- **Fixed Window Commands**: Include `cd` command inside new window command string
+  - Before: `cd backend && start cmd /k "npm run dev"` ❌ (didn't work)
+  - After: `start cmd /k "cd /d "%ROOT_DIR%backend" && npm run dev"` ✅
+- **Improved Wait Times**: 5 seconds for backend, 8 seconds for frontend
+- **Clearer Status Messages**: Better user feedback throughout startup
+- Files: `start.bat`, `start-dev.bat`
+- Commits: `1347db7`, `15d53d9`
+
 ### Added - April 6, 2026
 
 #### User Self-Service Backend Endpoints ✅ NEW!
