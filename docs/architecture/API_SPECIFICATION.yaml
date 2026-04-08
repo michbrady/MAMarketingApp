@@ -1,0 +1,2190 @@
+openapi: 3.0.3
+info:
+  title: UnFranchise Marketing App API
+  description: |
+    API for the UnFranchise Marketing App - A corporate-controlled content sharing
+    and engagement platform for UnFranchise Owners (UFOs).
+
+    ## Authentication
+    Most endpoints require Bearer token authentication via JWT.
+    Include the access token in the Authorization header:
+    ```
+    Authorization: Bearer {access_token}
+    ```
+
+    ## Rate Limiting
+    - Authentication endpoints: 5 requests per 15 minutes
+    - Standard API endpoints: 100 requests per minute
+    - Share endpoints: 500 requests per hour
+    - Upload endpoints: 20 requests per hour
+
+    Rate limit information is included in response headers:
+    - `X-RateLimit-Limit`: Maximum requests allowed
+    - `X-RateLimit-Remaining`: Remaining requests
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+    ## Pagination
+    List endpoints support pagination via query parameters:
+    - `page`: Page number (default: 1)
+    - `limit`: Items per page (default: 20, max: 100)
+    - `sort`: Sort field with optional `-` prefix for descending (e.g., `-createdAt`)
+
+    ## Error Handling
+    All errors follow a consistent format with appropriate HTTP status codes.
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@unfranchise.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.unfranchise.com/v1
+    description: Production server
+  - url: https://staging-api.unfranchise.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Content
+    description: Content library and management
+  - name: Sharing
+    description: Content sharing and tracking
+  - name: Tracking
+    description: Engagement tracking and redirects
+  - name: Contacts
+    description: Contact management
+  - name: Engagement
+    description: Analytics and engagement metrics
+  - name: Notifications
+    description: User notifications and preferences
+  - name: Admin
+    description: Administrative operations
+
+paths:
+  # ===== AUTHENTICATION =====
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user and receive access token
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: ufo12345
+                password:
+                  type: string
+                  format: password
+                  example: SecurePassword123!
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=abc123; HttpOnly; Secure; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      expiresIn:
+                        type: integer
+                        description: Token expiry in seconds
+                        example: 900
+                      user:
+                        $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Get new access token using refresh token from cookie
+      operationId: refreshToken
+      security: []
+      parameters:
+        - in: cookie
+          name: refreshToken
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                description: New refresh token (rotated)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      expiresIn:
+                        type: integer
+                        example: 900
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      description: Invalidate current session and refresh token
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password/reset/request:
+    post:
+      tags: [Authentication]
+      summary: Request password reset
+      description: Send password reset email to user
+      operationId: requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 to prevent enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: If an account exists, a reset email has been sent
+
+  /auth/password/reset:
+    post:
+      tags: [Authentication]
+      summary: Reset password
+      description: Reset user password with token from email
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/sessions:
+    get:
+      tags: [Authentication]
+      summary: List active sessions
+      description: Get all active sessions for current user
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sessions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+  /auth/sessions/{sessionId}:
+    delete:
+      tags: [Authentication]
+      summary: Revoke session
+      description: Revoke a specific session (logout from device)
+      operationId: revokeSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session revoked successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===== CONTENT =====
+  /content:
+    get:
+      tags: [Content]
+      summary: List content
+      description: Get paginated list of content items with filters
+      operationId: listContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category slug
+        - name: contentType
+          in: query
+          schema:
+            type: string
+            enum: [video, image, pdf, landing_page, product, bundle, share_card]
+        - name: market
+          in: query
+          schema:
+            type: string
+          description: Filter by market code
+        - name: language
+          in: query
+          schema:
+            type: string
+          description: Filter by language code
+        - name: campaign
+          in: query
+          schema:
+            type: string
+          description: Filter by campaign slug
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Full-text search in title and description
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+          description: Filter featured content only
+      responses:
+        '200':
+          description: Content list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContentItem'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Content]
+      summary: Create content
+      description: Create new content item (Admin only)
+      operationId: createContent
+      security:
+        - bearerAuth: [content:create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentItemCreate'
+      responses:
+        '201':
+          description: Content created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentItem'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /content/{contentId}:
+    get:
+      tags: [Content]
+      summary: Get content details
+      description: Get detailed information about a content item
+      operationId: getContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentItemDetail'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Content]
+      summary: Update content
+      description: Update content item (Admin only)
+      operationId: updateContent
+      security:
+        - bearerAuth: [content:edit]
+      parameters:
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentItemUpdate'
+      responses:
+        '200':
+          description: Content updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentItem'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Content]
+      summary: Delete content
+      description: Soft delete content item (Admin only)
+      operationId: deleteContent
+      security:
+        - bearerAuth: [content:delete]
+      parameters:
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Content deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/featured:
+    get:
+      tags: [Content]
+      summary: Get featured content
+      description: Get list of featured content items
+      operationId: getFeaturedContent
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Featured content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContentItem'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+  /content/categories:
+    get:
+      tags: [Content]
+      summary: List categories
+      description: Get all content categories
+      operationId: listCategories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+  /content/campaigns:
+    get:
+      tags: [Content]
+      summary: List campaigns
+      description: Get all active campaigns
+      operationId: listCampaigns
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Campaigns retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+  # ===== SHARING =====
+  /shares:
+    post:
+      tags: [Sharing]
+      summary: Create share
+      description: Share content via SMS, email, or social
+      operationId: createShare
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCreate'
+      responses:
+        '201':
+          description: Share created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ShareResponse'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [Sharing]
+      summary: Get share history
+      description: Get user's share history with pagination
+      operationId: getShareHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [sms, email, social]
+        - name: contentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Share history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareEvent'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+  /shares/{shareId}:
+    get:
+      tags: [Sharing]
+      summary: Get share details
+      description: Get detailed information about a share
+      operationId: getShare
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Share details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ShareEventDetail'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /shares/preview:
+    post:
+      tags: [Sharing]
+      summary: Preview share
+      description: Preview how share will look before sending
+      operationId: previewShare
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareCreate'
+      responses:
+        '200':
+          description: Share preview generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      messagePreview:
+                        type: string
+                      trackingUrl:
+                        type: string
+                      subject:
+                        type: string
+                        nullable: true
+
+  /shares/templates/{channel}:
+    get:
+      tags: [Sharing]
+      summary: Get share templates
+      description: Get available templates for a channel
+      operationId: getShareTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [sms, email, social]
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareTemplate'
+
+  # ===== TRACKING =====
+  /t/{shortcode}:
+    get:
+      tags: [Tracking]
+      summary: Tracking redirect
+      description: Redirect tracking link and record click event
+      operationId: trackingRedirect
+      security: []
+      parameters:
+        - name: shortcode
+          in: path
+          required: true
+          schema:
+            type: string
+            example: abc123
+      responses:
+        '302':
+          description: Redirect to destination URL
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '404':
+          description: Tracking link not found or expired
+
+  /tracking/events:
+    post:
+      tags: [Tracking]
+      summary: Track engagement event
+      description: Record client-side engagement event (beacon endpoint)
+      operationId: trackEvent
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType, trackingCode]
+              properties:
+                eventType:
+                  type: string
+                  enum: [view, video_start, video_complete, scroll, exit]
+                trackingCode:
+                  type: string
+                duration:
+                  type: integer
+                  description: Duration in seconds
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '204':
+          description: Event recorded successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /tracking/content/{contentId}/analytics:
+    get:
+      tags: [Tracking]
+      summary: Get content analytics
+      description: Get engagement analytics for specific content
+      operationId: getContentAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContentAnalytics'
+
+  # ===== CONTACTS =====
+  /contacts:
+    post:
+      tags: [Contacts]
+      summary: Create contact
+      description: Add new contact to user's contact list
+      operationId: createContact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreate'
+      responses:
+        '201':
+          description: Contact created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Contact'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+    get:
+      tags: [Contacts]
+      summary: List contacts
+      description: Get user's contacts with filtering and search
+      operationId: listContacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in name, email, company
+        - name: tags
+          in: query
+          schema:
+            type: string
+          description: Comma-separated tag names
+        - name: relationshipType
+          in: query
+          schema:
+            type: string
+            enum: [prospect, customer, distributor, partner, other]
+      responses:
+        '200':
+          description: Contacts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contact'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /contacts/{contactId}:
+    get:
+      tags: [Contacts]
+      summary: Get contact details
+      description: Get detailed contact information
+      operationId: getContact
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contact retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactDetail'
+
+    put:
+      tags: [Contacts]
+      summary: Update contact
+      description: Update contact information
+      operationId: updateContact
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactUpdate'
+      responses:
+        '200':
+          description: Contact updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Contact'
+
+    delete:
+      tags: [Contacts]
+      summary: Delete contact
+      description: Delete contact from user's list
+      operationId: deleteContact
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Contact deleted successfully
+
+  /contacts/import:
+    post:
+      tags: [Contacts]
+      summary: Import contacts
+      description: Import contacts from CSV file
+      operationId: importContacts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file with contacts
+      responses:
+        '202':
+          description: Import job started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      jobId:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        example: processing
+
+  /contacts/import/{jobId}:
+    get:
+      tags: [Contacts]
+      summary: Get import job status
+      description: Check status of contact import job
+      operationId: getImportJobStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportJob'
+
+  # ===== ENGAGEMENT =====
+  /engagement/dashboard:
+    get:
+      tags: [Engagement]
+      summary: Get engagement dashboard
+      description: Get user's engagement dashboard with key metrics
+      operationId: getEngagementDashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+      responses:
+        '200':
+          description: Dashboard data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EngagementDashboard'
+
+  /engagement/contacts/{contactId}:
+    get:
+      tags: [Engagement]
+      summary: Get contact engagement
+      description: Get engagement timeline for specific contact
+      operationId: getContactEngagement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contact engagement retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactEngagement'
+
+  /engagement/follow-ups:
+    get:
+      tags: [Engagement]
+      summary: Get follow-up opportunities
+      description: Get contacts needing follow-up
+      operationId: getFollowUpOpportunities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: daysThreshold
+          in: query
+          schema:
+            type: integer
+            default: 3
+      responses:
+        '200':
+          description: Follow-up opportunities retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FollowUpOpportunity'
+
+  /engagement/top-content:
+    get:
+      tags: [Engagement]
+      summary: Get top performing content
+      description: Get user's top performing content
+      operationId: getTopContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        '200':
+          description: Top content retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContentPerformance'
+
+  # ===== NOTIFICATIONS =====
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get notifications
+      description: Get user's notifications
+      operationId: getNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Notifications retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /notifications/{notificationId}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark notification as read
+      description: Mark a notification as read
+      operationId: markNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Notification marked as read
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Mark all as read
+      description: Mark all notifications as read
+      operationId: markAllNotificationsRead
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: All notifications marked as read
+
+  /notifications/preferences:
+    get:
+      tags: [Notifications]
+      summary: Get notification preferences
+      description: Get user's notification preferences
+      operationId: getNotificationPreferences
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Preferences retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NotificationPreferences'
+
+    put:
+      tags: [Notifications]
+      summary: Update notification preferences
+      description: Update user's notification preferences
+      operationId: updateNotificationPreferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NotificationPreferences'
+
+  # ===== ADMIN =====
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (Admin)
+      description: Get all users with filtering
+      operationId: listUsers
+      security:
+        - bearerAuth: [user:manage]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: market
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended]
+      responses:
+        '200':
+          description: Users retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserAdmin'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /admin/reports/usage:
+    get:
+      tags: [Admin]
+      summary: Get usage report
+      description: Get platform usage statistics
+      operationId: getUsageReport
+      security:
+        - bearerAuth: [report:view:all]
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [market, role, day, week, month]
+      responses:
+        '200':
+          description: Usage report retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UsageReport'
+
+  /admin/system/health:
+    get:
+      tags: [Admin]
+      summary: System health check
+      description: Get system health status
+      operationId: getSystemHealth
+      security:
+        - bearerAuth: [system:settings]
+      responses:
+        '200':
+          description: Health status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          responseTime:
+                            type: integer
+                      redis:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                      integrations:
+                        type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      description: Sort field (prefix with - for descending)
+      schema:
+        type: string
+        example: -createdAt
+
+  schemas:
+    # Common
+    Meta:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+    # User & Auth
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ufoid:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+        role:
+          type: string
+        marketId:
+          type: string
+        languageCode:
+          type: string
+        status:
+          type: string
+
+    UserAdmin:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            lastLoginAt:
+              type: string
+              format: date-time
+            loginCount:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+
+    Session:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        deviceType:
+          type: string
+        deviceInfo:
+          type: string
+        ipAddress:
+          type: string
+        lastActivityAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        isCurrent:
+          type: boolean
+
+    # Content
+    ContentItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+        contentType:
+          type: string
+          enum: [video, image, pdf, landing_page, product, bundle, share_card]
+        category:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            slug:
+              type: string
+        tags:
+          type: array
+          items:
+            type: string
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [sms, email, social]
+        market:
+          type: string
+        language:
+          type: string
+        publishStatus:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ContentItemDetail:
+      allOf:
+        - $ref: '#/components/schemas/ContentItem'
+        - type: object
+          properties:
+            mediaUrl:
+              type: string
+              format: uri
+            destinationUrl:
+              type: string
+              format: uri
+            campaignName:
+              type: string
+            ctaType:
+              type: string
+            ctaLabel:
+              type: string
+            allowPersonalNote:
+              type: boolean
+            complianceFlags:
+              type: array
+              items:
+                type: string
+            totalShares:
+              type: integer
+            totalClicks:
+              type: integer
+            totalViews:
+              type: integer
+
+    ContentItemCreate:
+      type: object
+      required: [title, contentType]
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        mediaUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+        destinationUrl:
+          type: string
+          format: uri
+        contentType:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+        channels:
+          type: array
+          items:
+            type: string
+        markets:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        campaignId:
+          type: string
+          format: uuid
+        allowPersonalNote:
+          type: boolean
+        publishStatus:
+          type: string
+          enum: [draft, review, approved, published]
+
+    ContentItemUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ContentItemCreate'
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        iconUrl:
+          type: string
+        color:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+        totalContent:
+          type: integer
+        totalShares:
+          type: integer
+
+    # Sharing
+    ShareCreate:
+      type: object
+      required: [contentId, channel, recipients]
+      properties:
+        contentId:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [sms, email, social]
+        recipients:
+          type: array
+          items:
+            type: object
+            properties:
+              contactId:
+                type: string
+                format: uuid
+              email:
+                type: string
+                format: email
+              phone:
+                type: string
+              name:
+                type: string
+        personalNote:
+          type: string
+          maxLength: 500
+        sendMethod:
+          type: string
+          enum: [system, manual]
+          default: manual
+
+    ShareResponse:
+      type: object
+      properties:
+        shareId:
+          type: string
+          format: uuid
+        trackingLinks:
+          type: array
+          items:
+            type: object
+            properties:
+              recipientId:
+                type: string
+                format: uuid
+              shortUrl:
+                type: string
+                format: uri
+              fullUrl:
+                type: string
+                format: uri
+        messagePreview:
+          type: string
+        status:
+          type: string
+
+    ShareEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contentTitle:
+          type: string
+        contentThumbnail:
+          type: string
+          format: uri
+        channel:
+          type: string
+        recipientCount:
+          type: integer
+        clicks:
+          type: integer
+        views:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ShareEventDetail:
+      allOf:
+        - $ref: '#/components/schemas/ShareEvent'
+        - type: object
+          properties:
+            content:
+              $ref: '#/components/schemas/ContentItem'
+            personalNote:
+              type: string
+            recipients:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  phone:
+                    type: string
+                  trackingUrl:
+                    type: string
+                  clicked:
+                    type: boolean
+                  clickedAt:
+                    type: string
+                    format: date-time
+
+    ShareTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channel:
+          type: string
+        subject:
+          type: string
+        bodyTemplate:
+          type: string
+        isDefault:
+          type: boolean
+
+    # Tracking
+    ContentAnalytics:
+      type: object
+      properties:
+        totalShares:
+          type: integer
+        totalClicks:
+          type: integer
+        totalViews:
+          type: integer
+        clickRate:
+          type: number
+          format: float
+        viewRate:
+          type: number
+          format: float
+        topChannels:
+          type: array
+          items:
+            type: object
+            properties:
+              channel:
+                type: string
+              shares:
+                type: integer
+              clicks:
+                type: integer
+        engagementOverTime:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              shares:
+                type: integer
+              clicks:
+                type: integer
+              views:
+                type: integer
+
+    # Contacts
+    ContactCreate:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        mobile:
+          type: string
+        company:
+          type: string
+        jobTitle:
+          type: string
+        relationshipType:
+          type: string
+          enum: [prospect, customer, distributor, partner, other]
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+        consentEmail:
+          type: boolean
+        consentSms:
+          type: boolean
+        notes:
+          type: string
+
+    ContactUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ContactCreate'
+
+    Contact:
+      allOf:
+        - $ref: '#/components/schemas/ContactCreate'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            engagementScore:
+              type: integer
+            lastEngagementDate:
+              type: string
+              format: date-time
+            totalSharesReceived:
+              type: integer
+            totalClicks:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+
+    ContactDetail:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            recentEngagements:
+              type: array
+              items:
+                type: object
+                properties:
+                  eventType:
+                    type: string
+                  contentTitle:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+    ImportJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        totalRows:
+          type: integer
+        processedRows:
+          type: integer
+        successfulImports:
+          type: integer
+        failedImports:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    # Engagement
+    EngagementDashboard:
+      type: object
+      properties:
+        totalShares:
+          type: integer
+        totalClicks:
+          type: integer
+        totalContacts:
+          type: integer
+        engagementRate:
+          type: number
+          format: float
+        topPerformingContent:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentPerformance'
+        hotContacts:
+          type: array
+          items:
+            type: object
+            properties:
+              contactId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              recentEngagements:
+                type: integer
+              lastEngagement:
+                type: string
+                format: date-time
+              score:
+                type: integer
+        followUpOpportunities:
+          type: integer
+
+    ContactEngagement:
+      type: object
+      properties:
+        contactId:
+          type: string
+          format: uuid
+        engagementScore:
+          type: integer
+        totalShares:
+          type: integer
+        totalClicks:
+          type: integer
+        timeline:
+          type: array
+          items:
+            type: object
+            properties:
+              eventType:
+                type: string
+              contentTitle:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              metadata:
+                type: object
+
+    FollowUpOpportunity:
+      type: object
+      properties:
+        contactId:
+          type: string
+          format: uuid
+        contactName:
+          type: string
+        reason:
+          type: string
+        lastEngagement:
+          type: string
+          format: date-time
+        daysSinceLastContact:
+          type: integer
+        engagementCount:
+          type: integer
+        recommendedAction:
+          type: string
+
+    ContentPerformance:
+      type: object
+      properties:
+        contentId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        thumbnailUrl:
+          type: string
+        shares:
+          type: integer
+        clicks:
+          type: integer
+        views:
+          type: integer
+        clickRate:
+          type: number
+          format: float
+
+    # Notifications
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [engagement, content_update, follow_up, achievement, reminder, system]
+        title:
+          type: string
+        message:
+          type: string
+        actionUrl:
+          type: string
+        actionLabel:
+          type: string
+        isRead:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationPreferences:
+      type: object
+      properties:
+        emailNotifications:
+          type: object
+          properties:
+            engagement:
+              type: boolean
+            contentUpdates:
+              type: boolean
+            followUpReminders:
+              type: boolean
+            dailyDigest:
+              type: boolean
+            weeklyReport:
+              type: boolean
+        inAppNotifications:
+          type: object
+          properties:
+            engagement:
+              type: boolean
+            contentUpdates:
+              type: boolean
+            followUpReminders:
+              type: boolean
+        pushNotifications:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            engagement:
+              type: boolean
+            followUpReminders:
+              type: boolean
+
+    # Admin
+    UsageReport:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        totalShares:
+          type: integer
+        totalClicks:
+          type: integer
+        byMarket:
+          type: array
+          items:
+            type: object
+            properties:
+              market:
+                type: string
+              users:
+                type: integer
+              shares:
+                type: integer
+              clicks:
+                type: integer
+        byPeriod:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              shares:
+                type: integer
+              clicks:
+                type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
