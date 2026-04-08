@@ -119,9 +119,7 @@ echo.
 
 REM Start Backend
 echo [START] Starting Backend Server (Port 3001)...
-cd backend
-start "UnFranchise Backend" cmd /k "npm run dev"
-cd ..
+start "UnFranchise Backend" cmd /k "cd /d "%ROOT_DIR%backend" && npm run dev"
 
 REM Wait for backend to start
 echo [WAIT] Waiting for backend to initialize (5 seconds)...
@@ -130,9 +128,7 @@ echo.
 
 REM Start Frontend
 echo [START] Starting Frontend Server (Port 3000)...
-cd frontend
-start "UnFranchise Frontend" cmd /k "npm run dev"
-cd ..
+start "UnFranchise Frontend" cmd /k "cd /d "%ROOT_DIR%frontend" && npm run dev"
 
 REM Wait for frontend to start
 echo [WAIT] Waiting for frontend to initialize (8 seconds)...
