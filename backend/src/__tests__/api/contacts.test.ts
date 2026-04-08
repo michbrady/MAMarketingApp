@@ -480,8 +480,8 @@ describe('Contact API', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.imported).toBe(contactImportData.valid.length);
-      expect(response.body.data.failed).toBe(0);
+      expect(response.body.data.successCount).toBe(contactImportData.valid.length);
+      expect(response.body.data.errorCount).toBe(0);
     });
 
     it('should report errors for invalid contacts', async () => {
@@ -492,8 +492,8 @@ describe('Contact API', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.imported).toBeGreaterThan(0);
-      expect(response.body.data.failed).toBeGreaterThan(0);
+      expect(response.body.data.successCount).toBeGreaterThan(0);
+      expect(response.body.data.errorCount).toBeGreaterThan(0);
       expect(response.body.data.errors).toBeDefined();
       expect(Array.isArray(response.body.data.errors)).toBe(true);
     });
