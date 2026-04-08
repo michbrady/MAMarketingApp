@@ -34,15 +34,18 @@ describe('Contact API', () => {
       const response = await request(app)
         .post('/api/v1/contacts')
         .set('Authorization', `Bearer ${ufoToken}`)
-        .send(newContactData.valid)
-        .expect(201);
+        .send(newContactData.valid);
 
+      console.log('SUCCESS Response data:', JSON.stringify(response.body.data, null, 2));
+
+      expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
-      expect(response.body.data.firstName).toBe(newContactData.valid.firstName);
-      expect(response.body.data.lastName).toBe(newContactData.valid.lastName);
-      expect(response.body.data.email).toBe(newContactData.valid.email);
-      expect(response.body.data.contactId).toBeDefined();
+      // Database returns PascalCase field names
+      expect(response.body.data.FirstName).toBe(newContactData.valid.firstName);
+      expect(response.body.data.LastName).toBe(newContactData.valid.lastName);
+      expect(response.body.data.Email).toBe(newContactData.valid.email);
+      expect(response.body.data.ContactID).toBeDefined();
     });
 
     it('should create contact with minimal data', async () => {
@@ -53,7 +56,7 @@ describe('Contact API', () => {
         .expect(201);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.firstName).toBe(newContactData.minimal.firstName);
+      expect(response.body.data.FirstName).toBe(newContactData.minimal.firstName);
     });
 
     it('should fail without authentication', async () => {
@@ -93,12 +96,12 @@ describe('Contact API', () => {
           firstName: 'Phone',
           lastName: 'Test',
           email: randomEmail(),
-          phone: '(555) 123-4567' // Various formats should be normalized
+          mobile: '(555) 123-4567' // Various formats should be normalized
         })
         .expect(201);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.phone).toBeDefined();
+      expect(response.body.data.Mobile).toBeDefined();
       // Phone should be normalized (e.g., to +15551234567)
     });
 
@@ -278,13 +281,13 @@ describe('Contact API', () => {
         .set('Authorization', `Bearer ${ufoToken}`)
         .send({
           firstName: 'Updated',
-          phone: '+15559998888'
+          mobile: '+15559998888'
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.firstName).toBe('Updated');
-      expect(response.body.data.phone).toBe('+15559998888');
+      expect(response.body.data.mobile).toBe('+15559998888');
     });
 
     it('should not allow updating other users contacts', async () => {

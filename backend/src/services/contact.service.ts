@@ -36,7 +36,6 @@ export class ContactService {
         FROM Contact
         WHERE OwnerUserID = @userId
           AND ContactHash = @contactHash
-          AND IsDeleted = 0
           AND Status != 'Bounced'
       `, { userId, contactHash });
 
@@ -209,7 +208,7 @@ export class ContactService {
         UPDATE Contact
         SET ${updateFields.join(', ')}
         OUTPUT INSERTED.*
-        WHERE ContactID = @contactId AND OwnerUserID = @userId AND IsDeleted = 0
+        WHERE ContactID = @contactId AND OwnerUserID = @userId
       `;
 
       const result = await query<Contact>(updateQuery, params);
@@ -228,7 +227,7 @@ export class ContactService {
   }
 
   /**
-   * Delete a contact (soft delete)
+   * Delete a contact (soft delete - sets status to Inactive)
    */
   async deleteContact(contactId: number, userId: number): Promise<boolean> {
     try {
@@ -236,9 +235,9 @@ export class ContactService {
 
       const result = await query(`
         UPDATE Contact
-        SET IsDeleted = 1,
+        SET Status = 'Inactive',
             UpdatedDate = SYSDATETIME()
-        WHERE ContactID = @contactId AND OwnerUserID = @userId AND IsDeleted = 0
+        WHERE ContactID = @contactId AND OwnerUserID = @userId
       `, { contactId, userId });
 
       const rowsAffected = (result as any).rowsAffected[0];
@@ -257,7 +256,7 @@ export class ContactService {
   }
 
   /**
-   * Bulk delete contacts (soft delete)
+   * Bulk delete contacts (soft delete - sets status to Inactive)
    */
   async bulkDeleteContacts(contactIds: number[], userId: number): Promise<{ deleted: number }> {
     try {
@@ -276,9 +275,9 @@ export class ContactService {
 
       const result = await query(`
         UPDATE Contact
-        SET IsDeleted = 1,
+        SET Status = 'Inactive',
             UpdatedDate = SYSDATETIME()
-        WHERE ContactID IN (${placeholders}) AND OwnerUserID = @userId AND IsDeleted = 0
+        WHERE ContactID IN (${placeholders}) AND OwnerUserID = @userId
       `, params);
 
       const deleted = (result as any).rowsAffected[0] || 0;
@@ -300,7 +299,7 @@ export class ContactService {
       const result = await query<Contact>(`
         SELECT *
         FROM Contact
-        WHERE ContactID = @contactId AND OwnerUserID = @userId AND IsDeleted = 0
+        WHERE ContactID = @contactId AND OwnerUserID = @userId
       `, { contactId, userId });
 
       return result[0] || null;
@@ -335,7 +334,7 @@ export class ContactService {
         sortOrder = 'DESC'
       } = filters;
 
-      let whereClause = 'WHERE OwnerUserID = @userId AND IsDeleted = 0';
+      let whereClause = 'WHERE OwnerUserID = @userId';
       const params: any = { userId };
 
       if (status) {
@@ -432,7 +431,6 @@ export class ContactService {
         SELECT *
         FROM Contact
         WHERE OwnerUserID = @userId
-          AND IsDeleted = 0
           AND (
             FirstName LIKE @search OR
             LastName LIKE @search OR
@@ -501,7 +499,7 @@ export class ContactService {
           const contactHash = this.generateContactHash(row.email, row.mobile);
           const existing = await query<Contact>(`
             SELECT ContactID FROM Contact
-            WHERE OwnerUserID = @userId AND ContactHash = @contactHash AND IsDeleted = 0
+            WHERE OwnerUserID = @userId AND ContactHash = @contactHash
           `, { userId, contactHash });
 
           if (existing.length > 0) {
