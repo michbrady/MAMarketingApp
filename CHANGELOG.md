@@ -4,7 +4,53 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
 
 ## [Unreleased]
 
+### Added - April 8, 2026
+
+#### Timezone-Aware Timestamp Display ✨ NEW!
+- **Centralized Date Formatting**: Created `dateUtils.ts` utility with timezone-aware functions
+  - `formatTimestamp()` - Format ISO timestamps in user's timezone
+  - `formatRelativeTime()` - "2 hours ago" style display
+  - `parseNoteTimestamp()` - Parse notes with embedded timestamps
+  - Uses `date-fns-tz` for accurate timezone conversion
+- **User Timezone Preferences**: Extended User interface with timezone and dateFormat fields
+  - Frontend: `src/store/authStore.ts`
+  - Backend: Auth controller and service return timezone from database
+  - Settings page loads user's saved timezone preference
+- **Comprehensive Timezone List**: 75+ timezones grouped by region
+  - File: `frontend/src/constants/timezones.ts`
+  - Regions: North America, Europe, Asia, Oceania, Africa, Middle East
+  - Uses IANA timezone identifiers
+  - Dropdown with optgroups for better UX
+- **Enhanced Notes Display**: Timestamps now show in user's local timezone
+  - Each note in separate card with timestamp header
+  - Shows both formatted time and relative time
+  - Fixed label styling with proper dark mode support
+- Commits: `3ac7993`, `bff83ef`, `b0f9769`
+
 ### Fixed - April 8, 2026
+
+#### Contact Edit Screen UX Improvements 🎨
+- **Tags 400 Error Fixed**: Changed payload from `{tag}` to `{tags: [tag]}` to match backend
+  - File: `frontend/src/lib/api/contacts.ts`
+  - Backend expects array, not single string
+- **Tag Input Styling Improved**: Less prominent, better dark mode support
+  - Changed from `bg-white` to `bg-gray-50 dark:bg-gray-900/50`
+  - Reduced height from 42px to 38px
+  - Added dark mode border colors
+  - File: `frontend/src/components/contacts/TagInput.tsx`
+- **Notes Label Fixed**: Added dark mode support
+  - Changed from `text-gray-700` to `text-gray-700 dark:text-gray-300`
+  - Better visibility in dark mode
+  - File: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
+- Commits: `3ac7993`, `b0f9769`
+
+#### React Hooks Order Violation Fixed ⚛️
+- **Contact Detail Page Crash**: Fixed "React has detected a change in the order of Hooks" error
+  - Problem: `useMemo` hook placed after conditional return statement (loading check)
+  - Solution: Moved `useMemo` before any early returns to ensure consistent hook call order
+  - File: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
+  - Follows Rules of Hooks: hooks must be called in same order on every render
+- Commit: `pending`
 
 #### Frontend/Backend Field Mapping Issues 🔧
 - **Contact Creation Tags Bug**: Fixed `TypeError: .split is not a function` when creating contacts

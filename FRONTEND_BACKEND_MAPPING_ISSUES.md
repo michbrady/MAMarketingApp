@@ -326,5 +326,150 @@ queryClient.invalidateQueries({ queryKey: ['contact-activity', contactId] });
 
 ---
 
+## Issue #4: Contact Tags - 400 Bad Request Error
+
+### Problem
+Adding tags to a contact threw `AxiosError: Request failed with status code 400`
+
+### Root Cause
+**Format mismatch** between frontend and backend:
+- Frontend sent: `{ tag: string }` (singular)
+- Backend expected: `{ tags: string[] }` (array)
+
+```typescript
+// Frontend (contacts.ts line 272):
+{ tag }  // ❌ Wrong format
+
+// Backend validation (contact.controller.ts line 444):
+if (!tags || !Array.isArray(tags) || tags.length === 0) {
+  return 400  // Expects array!
+}
+```
+
+### Solution
+**File**: `frontend/src/lib/api/contacts.ts`
+
+```typescript
+// Fixed (line 272):
+{ tags: [tag] }  // ✅ Wrap in array
+```
+
+**Fix Date**: April 8, 2026  
+**Commit**: Frontend `3ac7993` - "Implement comprehensive contact edit screen enhancements"
+
+---
+
+## Enhancement #1: Timezone-Aware Timestamp Display
+
+### Context
+Notes displayed raw ISO timestamps like `[2026-04-08T12:34:56.789Z]` instead of user's local timezone.
+Notes label was too dim (missing dark mode support).
+Tag input had overly prominent "large white box" styling.
+
+### Solution Implemented
+
+#### 1. Created Centralized Date Formatting Utility
+**File**: `frontend/src/lib/dateUtils.ts` (NEW)
+
+Provides timezone-aware formatting functions:
+- `formatTimestamp()` - Format ISO timestamp in user's timezone
+- `formatRelativeTime()` - "2 hours ago" style formatting
+- `parseNoteTimestamp()` - Extract timestamps from notes text
+- `formatDate()`, `formatDateTime()` - Convenience wrappers
+
+Uses `date-fns-tz` for timezone conversion.
+
+#### 2. Extended User Interface with Timezone
+**Files**: 
+- `frontend/src/store/authStore.ts` - Added `timezone?` and `dateFormat?` fields
+- `backend/src/controllers/auth.controller.ts` - Return timezone in auth response
+- `backend/src/services/auth.service.ts` - Query TimeZone from User table
+
+#### 3. Enhanced Notes Display
+**File**: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
+
+- Parse notes with embedded timestamps
+- Display each note in separate card
+- Show formatted timestamp in user's timezone
+- Show relative time ("2 hours ago")
+- Fixed label dark mode: `dark:text-gray-300`
+
+#### 4. Improved Tag Input Styling
+**File**: `frontend/src/components/contacts/TagInput.tsx`
+
+- Changed from `bg-white` to `bg-gray-50 dark:bg-gray-900/50`
+- Reduced `min-h-[42px]` to `min-h-[38px]`
+- Added `dark:border-gray-600` for dark mode support
+
+#### 5. Comprehensive Timezone Support
+**File**: `frontend/src/constants/timezones.ts` (NEW)
+
+- 75+ timezones grouped by region
+- North America, Europe, Asia, Oceania, Africa, Middle East
+- IANA timezone identifiers
+- Helper function `getGroupedTimezones()` for optgroup rendering
+
+#### 6. Settings Page Integration
+**File**: `frontend/src/app/(dashboard)/settings/page.tsx`
+
+- Load user's saved timezone on mount
+- Comprehensive timezone dropdown with optgroups
+- Falls back to browser timezone if user hasn't set one
+
+### Dependencies Added
+- `date-fns-tz@^3.2.0` - For timezone-aware date formatting
+
+### Fix Date
+April 8, 2026
+
+### Commits
+- Frontend: `3ac7993` - "Implement comprehensive contact edit screen enhancements"
+- Backend: `bff83ef` - "Backend: Return user timezone in auth response"
+- Main: `b0f9769` - "Update frontend submodule: contact edit screen enhancements"
+
+---
+
+## Issue #5: React Hooks Order Violation
+
+### Problem
+Clicking on a contact threw `Error: React has detected a change in the order of Hooks called by ContactDetailPage`
+
+### Root Cause
+The `useMemo` hook for parsing notes was placed **after** the early return for loading state:
+
+```typescript
+if (isLoading) {
+  return <div>Loading...</div>;  // Early return
+}
+
+const contact = contactData?.data;
+const parsedNotes = useMemo(() => { ... }, [contact?.notes]);  // ❌ Hook after conditional return
+```
+
+**Rules of Hooks violation**: Hooks must be called in the same order on every render. When `isLoading` is true, the component returns early and the `useMemo` hook is never called, causing a different hook order on subsequent renders.
+
+### Solution
+**File**: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
+
+Moved the `useMemo` hook **before** any conditional returns:
+
+```typescript
+// ✅ Hook called unconditionally before any returns
+const contact = contactData?.data;
+const parsedNotes = useMemo(() => {
+  if (!contact?.notes) return [];
+  return parseNoteTimestamp(contact.notes);
+}, [contact?.notes]);
+
+if (isLoading) {
+  return <div>Loading...</div>;  // Now hook is always called before this
+}
+```
+
+**Fix Date**: April 8, 2026  
+**Commit**: Frontend `pending` - "Fix React Hooks order violation in contact detail page"
+
+---
+
 **Last Updated**: April 8, 2026  
-**Status**: All known issues resolved ✅
+**Status**: All known issues resolved ✅ + Major enhancements completed ✨
