@@ -164,13 +164,14 @@ describe('Contact API', () => {
       const response = await request(app)
         .get('/api/v1/contacts')
         .set('Authorization', `Bearer ${ufoToken}`)
-        .query({ page: 1, limit: 2 })
+        .query({ offset: 0, limit: 2 })
         .expect(200);
 
       expect(response.body.data.length).toBeLessThanOrEqual(2);
       expect(response.body.pagination).toBeDefined();
-      expect(response.body.pagination.page).toBe(1);
+      expect(response.body.pagination.offset).toBe(0);
       expect(response.body.pagination.limit).toBe(2);
+      expect(response.body.pagination.total).toBeGreaterThanOrEqual(0);
     });
 
     it('should filter by status', async () => {
@@ -355,7 +356,13 @@ describe('Contact API', () => {
           email: randomEmail()
         });
 
+      if (response.status !== 201 || !response.body.data || !response.body.data.contactID) {
+        console.error('DELETE beforeAll failed to create contact:', response.status, response.body);
+        throw new Error('Failed to create test contact for DELETE tests');
+      }
+
       contactId = response.body.data.contactID;
+      console.log('DELETE beforeAll created contact with ID:', contactId);
     });
 
     it('should delete contact', async () => {

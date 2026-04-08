@@ -299,7 +299,7 @@ export class ContactService {
       const result = await query<Contact>(`
         SELECT *
         FROM Contact
-        WHERE ContactID = @contactId AND OwnerUserID = @userId
+        WHERE ContactID = @contactId AND OwnerUserID = @userId AND Status != 'Inactive'
       `, { contactId, userId });
 
       return result[0] || null;
@@ -334,7 +334,7 @@ export class ContactService {
         sortOrder = 'DESC'
       } = filters;
 
-      let whereClause = 'WHERE OwnerUserID = @userId';
+      let whereClause = "WHERE OwnerUserID = @userId AND Status != 'Inactive'";
       const params: any = { userId };
 
       if (status) {
@@ -431,6 +431,7 @@ export class ContactService {
         SELECT *
         FROM Contact
         WHERE OwnerUserID = @userId
+          AND Status != 'Inactive'
           AND (
             FirstName LIKE @search OR
             LastName LIKE @search OR
@@ -499,7 +500,7 @@ export class ContactService {
           const contactHash = this.generateContactHash(row.email, row.mobile);
           const existing = await query<Contact>(`
             SELECT ContactID FROM Contact
-            WHERE OwnerUserID = @userId AND ContactHash = @contactHash
+            WHERE OwnerUserID = @userId AND ContactHash = @contactHash AND Status != 'Inactive'
           `, { userId, contactHash });
 
           if (existing.length > 0) {
