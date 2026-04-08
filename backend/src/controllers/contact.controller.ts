@@ -23,6 +23,7 @@ export class ContactController {
       // Validate required fields
       if (!contactData.email && !contactData.mobile) {
         res.status(400).json({
+        success: false,
           error: 'Bad Request',
           message: 'Either email or mobile is required'
         });
@@ -32,6 +33,7 @@ export class ContactController {
       const contact = await contactService.createContact(contactData, userId);
 
       res.status(201).json({
+        success: false,
         success: true,
         data: transformContact(contact)
       });
@@ -39,6 +41,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Create contact error:', error);
       res.status(400).json({
+        success: false,
         error: 'Bad Request',
         message: error.message || 'Failed to create contact'
       });
@@ -84,6 +87,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('List contacts error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to retrieve contacts'
       });
@@ -98,33 +102,52 @@ export class ContactController {
       const userId = (req as any).user.userId;
       const contactId = parseInt(req.params.id as string);
 
-      const contact = await contactService.getContact(contactId, userId);
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+        success: false,
+          success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
 
-      if (!contact) {
+      // First check if contact exists at all
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
         res.status(404).json({
+        success: false,
+          success: false,
           error: 'Not Found',
           message: 'Contact not found'
         });
         return;
       }
 
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+        success: false,
+          success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
+
       res.json({
         success: true,
-        data: transformContact(contact)
+        data: transformContact(anyContact)
       });
 
     } catch (error: any) {
       logger.error('Get contact error:', error);
-      logger.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        contactId: req.params.id,
-        userId: (req as any).user?.userId
-      });
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
-        message: error.message || 'Failed to retrieve contact',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: 'Failed to retrieve contact'
       });
     }
   }
@@ -138,6 +161,38 @@ export class ContactController {
       const contactId = parseInt(req.params.id as string);
       const updates: UpdateContactRequest = req.body;
 
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+        success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
+
+      // First check if contact exists
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
+        res.status(404).json({
+        success: false,
+          error: 'Not Found',
+          message: 'Contact not found'
+        });
+        return;
+      }
+
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+        success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
+
       const contact = await contactService.updateContact(contactId, updates, userId);
 
       res.json({
@@ -148,6 +203,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Update contact error:', error);
       res.status(400).json({
+        success: false,
         error: 'Bad Request',
         message: error.message || 'Failed to update contact'
       });
@@ -162,10 +218,43 @@ export class ContactController {
       const userId = (req as any).user.userId;
       const contactId = parseInt(req.params.id as string);
 
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+        success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
+
+      // First check if contact exists
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
+        res.status(404).json({
+        success: false,
+          error: 'Not Found',
+          message: 'Contact not found'
+        });
+        return;
+      }
+
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+        success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
+
       const deleted = await contactService.deleteContact(contactId, userId);
 
       if (!deleted) {
         res.status(404).json({
+        success: false,
           error: 'Not Found',
           message: 'Contact not found'
         });
@@ -181,6 +270,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Delete contact error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to delete contact'
       });
@@ -197,6 +287,7 @@ export class ContactController {
 
       if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
         res.status(400).json({
+        success: false,
           error: 'Bad Request',
           message: 'contactIds array is required'
         });
@@ -214,6 +305,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Bulk delete contacts error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to delete contacts'
       });
@@ -230,6 +322,7 @@ export class ContactController {
 
       if (!query || query.trim().length === 0) {
         res.status(400).json({
+        success: false,
           error: 'Bad Request',
           message: 'Search query is required'
         });
@@ -246,6 +339,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Search contacts error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to search contacts'
       });
@@ -269,6 +363,7 @@ export class ContactController {
     } catch (error) {
       logger.error('Error getting top engaged contacts:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to get top engaged contacts'
       });
@@ -285,6 +380,7 @@ export class ContactController {
 
       if (!csvData || !Array.isArray(csvData) || csvData.length === 0) {
         res.status(400).json({
+        success: false,
           error: 'Bad Request',
           message: 'Invalid CSV data. Expected array of contacts.'
         });
@@ -301,6 +397,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Import contacts error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to import contacts'
       });
@@ -330,6 +427,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Export contacts error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to export contacts'
       });
@@ -347,6 +445,7 @@ export class ContactController {
 
       if (!tag || typeof tag !== 'string') {
         res.status(400).json({
+        success: false,
           error: 'Bad Request',
           message: 'Tag is required'
         });
@@ -363,6 +462,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Add tag error:', error);
       res.status(400).json({
+        success: false,
         error: 'Bad Request',
         message: error.message || 'Failed to add tag'
       });
@@ -388,6 +488,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Remove tag error:', error);
       res.status(400).json({
+        success: false,
         error: 'Bad Request',
         message: error.message || 'Failed to remove tag'
       });
@@ -412,6 +513,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Get activity error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to retrieve activity'
       });
@@ -430,6 +532,7 @@ export class ContactController {
       const contact = await contactService.getContact(contactId, userId);
       if (!contact) {
         res.status(404).json({
+        success: false,
           error: 'Not Found',
           message: 'Contact not found'
         });
@@ -446,6 +549,7 @@ export class ContactController {
     } catch (error: any) {
       logger.error('Update engagement score error:', error);
       res.status(500).json({
+        success: false,
         error: 'Internal Server Error',
         message: 'Failed to update engagement score'
       });

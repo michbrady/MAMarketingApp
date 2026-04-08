@@ -292,7 +292,26 @@ export class ContactService {
   }
 
   /**
-   * Get a single contact
+   * Get a single contact by ID (no ownership check)
+   */
+  async getContactById(contactId: number): Promise<Contact | null> {
+    try {
+      const result = await query<Contact>(`
+        SELECT *
+        FROM Contact
+        WHERE ContactID = @contactId AND Status != 'Inactive'
+      `, { contactId });
+
+      return result[0] || null;
+
+    } catch (error) {
+      logger.error('Get contact by ID error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single contact (with ownership check)
    */
   async getContact(contactId: number, userId: number): Promise<Contact | null> {
     try {
