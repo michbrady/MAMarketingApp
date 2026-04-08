@@ -63,6 +63,7 @@ export class ContactService {
           EmailOptIn,
           SMSOptIn,
           Status,
+          IsDeleted,
           ContactHash,
           CreatedDate,
           UpdatedDate
@@ -83,6 +84,7 @@ export class ContactService {
           @emailOptIn,
           @smsOptIn,
           @status,
+          0,
           @contactHash,
           SYSDATETIME(),
           SYSDATETIME()
@@ -231,26 +233,31 @@ export class ContactService {
    */
   async deleteContact(contactId: number, userId: number): Promise<boolean> {
     try {
-      logger.info(`Deleting contact ${contactId} for user ${userId}`);
+      logger.info(`[DELETE] Starting delete for contact ${contactId}, user ${userId}`);
 
       const result = await query(`
         UPDATE Contact
-        SET Status = 'Inactive',
+        SET IsDeleted = 1,
             UpdatedDate = SYSDATETIME()
-        WHERE ContactID = @contactId AND OwnerUserID = @userId
+        WHERE ContactID = @contactId AND OwnerUserID = @userId AND IsDeleted = 0
       `, { contactId, userId });
 
+      logger.info(`[DELETE] Query executed successfully`);
+
       const rowsAffected = (result as any).rowsAffected[0];
-      logger.info(`Delete contact result: ${rowsAffected} rows affected`);
+      logger.info(`[DELETE] Rows affected: ${rowsAffected}`);
 
       if (rowsAffected === 0) {
-        logger.warn(`Failed to delete contact ${contactId} - contact not found or access denied for user ${userId}`);
+        logger.warn(`[DELETE] Failed to delete contact ${contactId} - contact not found or access denied for user ${userId}`);
       }
 
+      logger.info(`[DELETE] Returning result: ${rowsAffected > 0}`);
       return rowsAffected > 0;
 
     } catch (error) {
-      logger.error('Delete contact error:', error);
+      logger.error('[DELETE] Error occurred:', error);
+      logger.error('[DELETE] Error message:', (error as any).message);
+      logger.error('[DELETE] Error stack:', (error as any).stack);
       throw error;
     }
   }
@@ -275,9 +282,9 @@ export class ContactService {
 
       const result = await query(`
         UPDATE Contact
-        SET Status = 'Inactive',
+        SET IsDeleted = 1,
             UpdatedDate = SYSDATETIME()
-        WHERE ContactID IN (${placeholders}) AND OwnerUserID = @userId
+        WHERE ContactID IN (${placeholders}) AND OwnerUserID = @userId AND IsDeleted = 0
       `, params);
 
       const deleted = (result as any).rowsAffected[0] || 0;
@@ -299,7 +306,7 @@ export class ContactService {
       const result = await query<Contact>(`
         SELECT *
         FROM Contact
-        WHERE ContactID = @contactId AND Status != 'Inactive'
+        WHERE ContactID = @contactId AND IsDeleted = 0
       `, { contactId });
 
       return result[0] || null;
@@ -318,7 +325,7 @@ export class ContactService {
       const result = await query<Contact>(`
         SELECT *
         FROM Contact
-        WHERE ContactID = @contactId AND OwnerUserID = @userId AND Status != 'Inactive'
+        WHERE ContactID = @contactId AND OwnerUserID = @userId AND IsDeleted = 0
       `, { contactId, userId });
 
       return result[0] || null;
@@ -353,7 +360,7 @@ export class ContactService {
         sortOrder = 'DESC'
       } = filters;
 
-      let whereClause = "WHERE OwnerUserID = @userId AND Status != 'Inactive'";
+      let whereClause = "WHERE OwnerUserID = @userId AND IsDeleted = 0";
       const params: any = { userId };
 
       if (status) {
@@ -450,7 +457,7 @@ export class ContactService {
         SELECT *
         FROM Contact
         WHERE OwnerUserID = @userId
-          AND Status != 'Inactive'
+          AND IsDeleted = 0
           AND (
             FirstName LIKE @search OR
             LastName LIKE @search OR
@@ -519,7 +526,7 @@ export class ContactService {
           const contactHash = this.generateContactHash(row.email, row.mobile);
           const existing = await query<Contact>(`
             SELECT ContactID FROM Contact
-            WHERE OwnerUserID = @userId AND ContactHash = @contactHash AND Status != 'Inactive'
+            WHERE OwnerUserID = @userId AND ContactHash = @contactHash AND IsDeleted = 0
           `, { userId, contactHash });
 
           if (existing.length > 0) {

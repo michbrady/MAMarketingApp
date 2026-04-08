@@ -265,10 +265,11 @@ export class ContactController {
 
     } catch (error: any) {
       logger.error('Delete contact error:', error);
+      logger.error('Error stack:', error.stack);
       res.status(500).json({
         success: false,
         error: 'Internal Server Error',
-        message: 'Failed to delete contact'
+        message: error.message || 'Failed to delete contact'
       });
     }
   }

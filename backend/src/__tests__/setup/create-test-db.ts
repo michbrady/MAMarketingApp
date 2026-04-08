@@ -88,6 +88,7 @@ async function createTestDatabase() {
       '09_Schema_FollowUp.sql',
       '10_Schema_Settings.sql',
       '11_Contact_Groups_Migration.sql',
+      'migrations/003_add_isdeleted_to_contacts.sql',
       '05_Stored_Procedures.sql',
       '06_Views.sql',
       '08_Analytics_Views.sql'
