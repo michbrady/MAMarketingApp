@@ -21,7 +21,7 @@ describe('Contact API', () => {
 
     ufoToken = ufo.token;
     ufo2Token = ufo2.token;
-    ufoUserId = ufo.user.id;
+    ufoUserId = parseInt(ufo.user.id, 10);
   });
 
   afterAll(async () => {

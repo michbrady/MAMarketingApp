@@ -4,7 +4,7 @@
  */
 
 /**
- * Convert PascalCase object keys to camelCase
+ * Convert PascalCase object keys to camelCase and parse numeric ID fields
  */
 export function toCamelCase<T = any>(obj: any): T {
   if (obj === null || obj === undefined) {
@@ -20,7 +20,14 @@ export function toCamelCase<T = any>(obj: any): T {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-        camelCased[camelKey] = obj[key];
+        let value = obj[key];
+
+        // Convert numeric ID fields from string to number
+        if (camelKey.endsWith('ID') && typeof value === 'string' && /^\d+$/.test(value)) {
+          value = parseInt(value, 10);
+        }
+
+        camelCased[camelKey] = value;
       }
     }
     return camelCased;
