@@ -20,11 +20,21 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
   - File: `frontend/src/lib/api/contacts.ts` - line 25
   - Commits: `5aa7089`, `41d2553`
 
+- **Contact Notes 404 Bug**: Fixed error when adding notes to contacts
+  - Frontend called `POST /contacts/:id/notes` endpoint that doesn't exist
+  - Database has single `Notes` text field, not separate notes table
+  - Updated frontend to append notes with timestamp to existing Notes field
+  - Uses existing `PUT /contacts/:id` endpoint to update notes
+  - Notes format: `[ISO timestamp] content` with blank line separator
+  - File: `frontend/src/lib/api/contacts.ts` - addContactNote()
+  - Commits: `f567141`, `7e2c477`
+
 - **Documentation**: Created comprehensive field mapping reference
   - File: `FRONTEND_BACKEND_MAPPING_ISSUES.md`
   - Documents PascalCase → camelCase transformation rules
   - Best practices for field mapping and type handling
   - Testing checklist for new fields/entities
+  - Now includes all 3 frontend/backend issues (tags, contactID, notes)
 
 #### Startup Scripts Enhanced 🚀
 - **Auto Browser Open**: start.bat now automatically opens http://localhost:3000

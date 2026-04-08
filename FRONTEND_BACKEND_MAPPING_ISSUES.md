@@ -237,6 +237,69 @@ When adding new fields or entities:
 
 ---
 
+## Issue #3: Contact Notes - Missing Endpoint
+
+### Problem
+Adding notes to a contact threw `AxiosError: Request failed with status code 404`
+
+### Root Cause
+Frontend called `POST /contacts/:id/notes` which doesn't exist in backend.
+
+**Design mismatch**:
+- Frontend UI: Expects timeline-style notes (add note → creates new entry)
+- Database schema: Single `Notes NVARCHAR(MAX)` field in Contact table
+- Backend: No `/notes` endpoint implemented
+
+```sql
+-- Database (03_Schema_Sharing_Tracking.sql, line 39)
+Notes NVARCHAR(MAX) NULL,  -- Just one text field, not a separate table
+```
+
+### Solution
+**File**: `frontend/src/lib/api/contacts.ts`
+
+Updated `addContactNote()` to work with single notes field:
+
+```typescript
+// Before:
+POST /contacts/:id/notes with { content }
+
+// After:
+1. GET /contacts/:id to fetch existing notes
+2. Append new note with timestamp: "[2026-04-08T...] content"
+3. PUT /contacts/:id with { notes: updatedNotes }
+4. Return mock ContactNote response for UI
+```
+
+**Note format** (stored as plain text with timestamps):
+```
+[2026-04-08T12:34:56.789Z] First note here
+
+[2026-04-08T13:45:00.123Z] Second note here
+```
+
+### Alternative Solutions Considered
+
+1. **Create notes table** - More scalable but requires:
+   - New ContactNotes table in database
+   - New backend endpoint POST /contacts/:id/notes
+   - Migration script to split existing Notes field
+   - More complex UI showing note history with author/timestamp
+
+2. **Keep current approach** - Simple, works with existing schema
+   - ✅ Chosen: Quick fix, preserves all existing notes
+   - ✅ No database changes required
+   - ⚠️ Notes not individually editable/deletable
+   - ⚠️ No author tracking per note
+   - ⚠️ Not ideal for many notes (single text field gets large)
+
+**Fix Date**: April 8, 2026  
+**Commits**:
+- Frontend: `f567141` - "Fix contact notes: use update endpoint instead of non-existent notes endpoint"
+- Main: `7e2c477` - "Update frontend submodule: fix contact notes 404 error"
+
+---
+
 ## Future Improvements
 
 1. **Schema Validation**: Add runtime validation with Zod to catch field mismatches early
