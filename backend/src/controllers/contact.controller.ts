@@ -124,7 +124,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
           success: false,
           error: 'Forbidden',
@@ -180,7 +180,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
         success: false,
           error: 'Forbidden',
@@ -237,7 +237,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
           success: false,
           error: 'Forbidden',
@@ -472,7 +472,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
           success: false,
           error: 'Forbidden',
@@ -530,7 +530,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
           success: false,
           error: 'Forbidden',
@@ -540,7 +540,7 @@ export class ContactController {
       }
 
       // Check if tag exists on contact
-      const currentTags = anyContact.Tags ? anyContact.Tags.split(',').map((t: string) => t.trim()) : [];
+      const currentTags = (anyContact as any).Tags ? (anyContact as any).Tags.split(',').map((t: string) => t.trim()) : [];
       if (!currentTags.includes(tag)) {
         res.status(404).json({
           success: false,
@@ -598,7 +598,7 @@ export class ContactController {
       }
 
       // Then check ownership
-      if (anyContact.OwnerUserID !== userId) {
+      if ((anyContact as any).OwnerUserID !== userId) {
         res.status(403).json({
           success: false,
           error: 'Forbidden',
