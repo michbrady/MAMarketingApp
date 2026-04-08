@@ -14,6 +14,7 @@ interface User {
   RoleID: number;
   RoleName?: string;
   Status: string;
+  TimeZone?: string;
   Market?: string;
 }
 
@@ -55,6 +56,7 @@ export class AuthService {
           u.RoleID,
           r.RoleName,
           u.Status,
+          u.TimeZone,
           m.MarketCode as Market
         FROM [User] u
         LEFT JOIN [Role] r ON u.RoleID = r.RoleID

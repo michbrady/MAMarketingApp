@@ -157,6 +157,8 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.roleName,
+        timezone: user.timezone,
+        dateFormat: user.dateFormat,
         createdAt: new Date().toISOString() // Default to current time
       };
 
