@@ -1,5 +1,6 @@
 @echo off
-REM UnFranchise Marketing App - Startup Script (Windows)
+REM UnFranchise Marketing App - Development Startup Script
+REM Improved version with better error handling
 REM Last Updated: April 8, 2026
 
 setlocal enabledelayedexpansion
@@ -15,7 +16,7 @@ REM Get the directory where this batch file is located
 set "ROOT_DIR=%~dp0"
 cd /d "%ROOT_DIR%"
 
-REM Check if Node.js is installed
+REM Check Node.js
 where node >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Node.js is not installed or not in PATH
@@ -24,12 +25,11 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Display Node.js version
 echo [CHECK] Node.js version:
 node --version
 echo.
 
-REM Check if npm is installed
+REM Check npm
 where npm >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] npm is not installed or not in PATH
@@ -37,12 +37,11 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Display npm version
 echo [CHECK] npm version:
 npm --version
 echo.
 
-REM Check if backend dependencies are installed
+REM Check backend dependencies
 if not exist "backend\node_modules" (
     echo [INSTALL] Installing backend dependencies...
     cd backend
@@ -57,7 +56,7 @@ if not exist "backend\node_modules" (
     echo.
 )
 
-REM Check if frontend dependencies are installed
+REM Check frontend dependencies
 if not exist "frontend\node_modules" (
     echo [INSTALL] Installing frontend dependencies...
     cd frontend
@@ -72,7 +71,7 @@ if not exist "frontend\node_modules" (
     echo.
 )
 
-REM Check if backend .env exists
+REM Check backend .env
 if not exist "backend\.env" (
     echo [WARNING] backend\.env file not found
     if exist "backend\.env.example" (
@@ -87,7 +86,7 @@ if not exist "backend\.env" (
     )
 )
 
-REM Check if frontend .env.local exists
+REM Check frontend .env.local
 if not exist "frontend\.env.local" (
     echo [INFO] Creating frontend\.env.local with default values...
     echo NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1 > frontend\.env.local
@@ -99,13 +98,14 @@ echo   Cleaning Up Old Processes
 echo ========================================
 echo.
 
-REM Kill any existing node processes on ports 3000 and 3001
-echo [CLEANUP] Stopping processes on port 3001 (Backend)...
+REM Kill processes on port 3001 (backend)
+echo [CLEANUP] Stopping processes on port 3001...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3001" 2^>nul') do (
     taskkill /F /PID %%a >nul 2>nul
 )
 
-echo [CLEANUP] Stopping processes on port 3000 (Frontend)...
+REM Kill processes on port 3000 (frontend)
+echo [CLEANUP] Stopping processes on port 3000...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" 2^>nul') do (
     taskkill /F /PID %%a >nul 2>nul
 )
@@ -157,7 +157,7 @@ echo.
 echo ========================================
 echo.
 echo [INFO] Backend and Frontend are running in separate windows
-echo [INFO] Check those windows for any errors or startup messages
+echo [INFO] Check those windows for any errors
 echo [INFO] Close those windows or press Ctrl+C to stop the servers
 echo.
 echo [BROWSER] Opening http://localhost:3000 in your default browser...
