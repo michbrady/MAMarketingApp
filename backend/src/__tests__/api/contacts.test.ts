@@ -36,16 +36,13 @@ describe('Contact API', () => {
         .set('Authorization', `Bearer ${ufoToken}`)
         .send(newContactData.valid);
 
-      console.log('SUCCESS Response data:', JSON.stringify(response.body.data, null, 2));
-
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
-      // Database returns PascalCase field names
-      expect(response.body.data.FirstName).toBe(newContactData.valid.firstName);
-      expect(response.body.data.LastName).toBe(newContactData.valid.lastName);
-      expect(response.body.data.Email).toBe(newContactData.valid.email);
-      expect(response.body.data.ContactID).toBeDefined();
+      expect(response.body.data.firstName).toBe(newContactData.valid.firstName);
+      expect(response.body.data.lastName).toBe(newContactData.valid.lastName);
+      expect(response.body.data.email).toBe(newContactData.valid.email);
+      expect(response.body.data.contactID).toBeDefined();
     });
 
     it('should create contact with minimal data', async () => {
@@ -56,7 +53,7 @@ describe('Contact API', () => {
         .expect(201);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.FirstName).toBe(newContactData.minimal.firstName);
+      expect(response.body.data.firstName).toBe(newContactData.minimal.firstName);
     });
 
     it('should fail without authentication', async () => {
@@ -101,7 +98,7 @@ describe('Contact API', () => {
         .expect(201);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.Mobile).toBeDefined();
+      expect(response.body.data.mobile).toBeDefined();
       // Phone should be normalized (e.g., to +15551234567)
     });
 

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import contactService from '../services/contact.service.js';
 import { createLogger } from '../utils/logger.js';
+import { transformContact, transformContacts } from '../utils/transform.js';
 import {
   CreateContactRequest,
   UpdateContactRequest,
@@ -32,7 +33,7 @@ export class ContactController {
 
       res.status(201).json({
         success: true,
-        data: contact
+        data: transformContact(contact)
       });
 
     } catch (error: any) {
@@ -71,7 +72,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: result.contacts,
+        data: transformContacts(result.contacts),
         pagination: {
           total: result.total,
           limit: filters.limit,
@@ -109,7 +110,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: contact
+        data: transformContact(contact)
       });
 
     } catch (error: any) {
@@ -141,7 +142,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: contact
+        data: transformContact(contact)
       });
 
     } catch (error: any) {
@@ -239,7 +240,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: contacts
+        data: transformContacts(contacts)
       });
 
     } catch (error: any) {
@@ -356,7 +357,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: contact
+        data: transformContact(contact)
       });
 
     } catch (error: any) {
@@ -381,7 +382,7 @@ export class ContactController {
 
       res.json({
         success: true,
-        data: contact
+        data: transformContact(contact)
       });
 
     } catch (error: any) {
