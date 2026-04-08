@@ -40,7 +40,16 @@ export function toCamelCase<T = any>(obj: any): T {
  * Transform Contact object from database to API format
  */
 export function transformContact(contact: any) {
-  return toCamelCase(contact);
+  const transformed = toCamelCase(contact);
+
+  // Convert tags from comma-separated string to array
+  if (transformed.tags && typeof transformed.tags === 'string') {
+    transformed.tags = transformed.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+  } else if (!transformed.tags) {
+    transformed.tags = [];
+  }
+
+  return transformed;
 }
 
 /**

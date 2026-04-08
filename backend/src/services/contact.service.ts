@@ -588,7 +588,8 @@ export class ContactService {
           TotalEngagements,
           LastEngagementDate,
           LastContactDate,
-          CreatedDate
+          CreatedDate,
+          OwnerUserID
         FROM Contact
         WHERE OwnerUserID = @userId
         ORDER BY LastName, FirstName
@@ -602,7 +603,7 @@ export class ContactService {
       const headers = [
         'FirstName', 'LastName', 'Email', 'Mobile', 'CompanyName', 'JobTitle',
         'RelationshipType', 'Tags', 'Status', 'EngagementScore', 'TotalSharesReceived',
-        'TotalEngagements', 'LastEngagementDate', 'LastContactDate', 'CreatedDate'
+        'TotalEngagements', 'LastEngagementDate', 'LastContactDate', 'CreatedDate', 'OwnerUserID'
       ];
 
       const csvRows = [headers.join(',')];
@@ -708,6 +709,33 @@ export class ContactService {
 
     } catch (error) {
       logger.error('Add contact tag error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add multiple tags to contact
+   */
+  async addContactTags(contactId: number, tags: string[], userId: number): Promise<Contact> {
+    try {
+      const contact = await this.getContact(contactId, userId);
+      if (!contact) {
+        throw new Error('Contact not found or access denied');
+      }
+
+      const currentTags = contact.tags ? contact.tags.split(',').map(t => t.trim()) : [];
+
+      // Add each new tag if not already present
+      tags.forEach(tag => {
+        if (!currentTags.includes(tag)) {
+          currentTags.push(tag);
+        }
+      });
+
+      return this.updateContact(contactId, { tags: currentTags }, userId);
+
+    } catch (error) {
+      logger.error('Add contact tags error:', error);
       throw error;
     }
   }

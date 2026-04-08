@@ -23,7 +23,7 @@ export class ContactController {
       // Validate required fields
       if (!contactData.email && !contactData.mobile) {
         res.status(400).json({
-        success: false,
+          success: false,
           error: 'Bad Request',
           message: 'Either email or mobile is required'
         });
@@ -33,7 +33,6 @@ export class ContactController {
       const contact = await contactService.createContact(contactData, userId);
 
       res.status(201).json({
-        success: false,
         success: true,
         data: transformContact(contact)
       });
@@ -105,7 +104,6 @@ export class ContactController {
       // Check for invalid ID format
       if (isNaN(contactId)) {
         res.status(400).json({
-        success: false,
           success: false,
           error: 'Bad Request',
           message: 'Invalid contact ID format'
@@ -118,7 +116,6 @@ export class ContactController {
 
       if (!anyContact) {
         res.status(404).json({
-        success: false,
           success: false,
           error: 'Not Found',
           message: 'Contact not found'
@@ -129,7 +126,6 @@ export class ContactController {
       // Then check ownership
       if (anyContact.OwnerUserID !== userId) {
         res.status(403).json({
-        success: false,
           success: false,
           error: 'Forbidden',
           message: 'Access denied'
@@ -221,7 +217,7 @@ export class ContactController {
       // Check for invalid ID format
       if (isNaN(contactId)) {
         res.status(400).json({
-        success: false,
+          success: false,
           error: 'Bad Request',
           message: 'Invalid contact ID format'
         });
@@ -233,7 +229,7 @@ export class ContactController {
 
       if (!anyContact) {
         res.status(404).json({
-        success: false,
+          success: false,
           error: 'Not Found',
           message: 'Contact not found'
         });
@@ -243,7 +239,7 @@ export class ContactController {
       // Then check ownership
       if (anyContact.OwnerUserID !== userId) {
         res.status(403).json({
-        success: false,
+          success: false,
           error: 'Forbidden',
           message: 'Access denied'
         });
@@ -254,7 +250,7 @@ export class ContactController {
 
       if (!deleted) {
         res.status(404).json({
-        success: false,
+          success: false,
           error: 'Not Found',
           message: 'Contact not found'
         });
@@ -435,24 +431,57 @@ export class ContactController {
   }
 
   /**
-   * POST /api/v1/contacts/:id/tags - Add tag to contact
+   * POST /api/v1/contacts/:id/tags - Add tags to contact
    */
   async addTag(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.userId;
       const contactId = parseInt(req.params.id as string);
-      const { tag } = req.body;
+      const { tags } = req.body;
 
-      if (!tag || typeof tag !== 'string') {
+      // Validate input
+      if (!tags || !Array.isArray(tags) || tags.length === 0) {
         res.status(400).json({
-        success: false,
+          success: false,
           error: 'Bad Request',
-          message: 'Tag is required'
+          message: 'Tags array is required'
         });
         return;
       }
 
-      const contact = await contactService.addContactTag(contactId, tag, userId);
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
+
+      // First check if contact exists at all
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
+        res.status(404).json({
+          success: false,
+          error: 'Not Found',
+          message: 'Contact not found'
+        });
+        return;
+      }
+
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
+
+      const contact = await contactService.addContactTags(contactId, tags, userId);
 
       res.json({
         success: true,
@@ -460,11 +489,11 @@ export class ContactController {
       });
 
     } catch (error: any) {
-      logger.error('Add tag error:', error);
-      res.status(400).json({
+      logger.error('Add tags error:', error);
+      res.status(500).json({
         success: false,
-        error: 'Bad Request',
-        message: error.message || 'Failed to add tag'
+        error: 'Internal Server Error',
+        message: 'Failed to add tags'
       });
     }
   }
@@ -478,6 +507,49 @@ export class ContactController {
       const contactId = parseInt(req.params.id as string);
       const tag = req.params.tag as string;
 
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
+
+      // First check if contact exists at all
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
+        res.status(404).json({
+          success: false,
+          error: 'Not Found',
+          message: 'Contact not found'
+        });
+        return;
+      }
+
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
+
+      // Check if tag exists on contact
+      const currentTags = anyContact.Tags ? anyContact.Tags.split(',').map((t: string) => t.trim()) : [];
+      if (!currentTags.includes(tag)) {
+        res.status(404).json({
+          success: false,
+          error: 'Not Found',
+          message: 'Tag not found on contact'
+        });
+        return;
+      }
+
       const contact = await contactService.removeContactTag(contactId, tag, userId);
 
       res.json({
@@ -487,10 +559,10 @@ export class ContactController {
 
     } catch (error: any) {
       logger.error('Remove tag error:', error);
-      res.status(400).json({
+      res.status(500).json({
         success: false,
-        error: 'Bad Request',
-        message: error.message || 'Failed to remove tag'
+        error: 'Internal Server Error',
+        message: 'Failed to remove tag'
       });
     }
   }
@@ -502,6 +574,38 @@ export class ContactController {
     try {
       const userId = (req as any).user.userId;
       const contactId = parseInt(req.params.id as string);
+
+      // Check for invalid ID format
+      if (isNaN(contactId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Bad Request',
+          message: 'Invalid contact ID format'
+        });
+        return;
+      }
+
+      // First check if contact exists at all
+      const anyContact = await contactService.getContactById(contactId);
+
+      if (!anyContact) {
+        res.status(404).json({
+          success: false,
+          error: 'Not Found',
+          message: 'Contact not found'
+        });
+        return;
+      }
+
+      // Then check ownership
+      if (anyContact.OwnerUserID !== userId) {
+        res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Access denied'
+        });
+        return;
+      }
 
       const activities = await contactService.getContactActivity(contactId, userId);
 

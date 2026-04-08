@@ -86,13 +86,15 @@ export const contactImportData = {
       email: 'valid@example.com'
     },
     {
-      firstName: 'Invalid',
-      lastName: 'Email',
-      email: 'notanemail'
+      firstName: 'Missing',
+      lastName: 'Contact Info'
+      // Missing both email and mobile - will fail validation
     },
     {
-      email: 'missing@example.com'
-      // Missing required fields
+      firstName: 'Also',
+      lastName: 'Missing',
+      companyName: 'Test Company'
+      // Missing both email and mobile - will fail validation
     }
   ]
 };

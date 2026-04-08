@@ -527,9 +527,9 @@ describe('Contact API', () => {
         .expect(200);
 
       expect(response.headers['content-type']).toContain('text/csv');
-      expect(response.text).toContain('firstName');
-      expect(response.text).toContain('lastName');
-      expect(response.text).toContain('email');
+      expect(response.text).toContain('FirstName');
+      expect(response.text).toContain('LastName');
+      expect(response.text).toContain('Email');
     });
 
     it('should export contacts as JSON', async () => {
@@ -551,7 +551,7 @@ describe('Contact API', () => {
         .expect(200);
 
       response.body.forEach((contact: any) => {
-        expect(contact.ownerUserID).toBe(ufoUserId);
+        expect(parseInt(contact.OwnerUserID, 10)).toBe(ufoUserId);
       });
     });
 
