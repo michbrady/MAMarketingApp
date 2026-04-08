@@ -127,7 +127,7 @@ describe('Contact API', () => {
         })
         .expect(201);
 
-      expect(response.body.data.userId).toBe(ufoUserId);
+      expect(response.body.data.ownerUserID).toBe(ufoUserId);
     });
   });
 
@@ -144,7 +144,7 @@ describe('Contact API', () => {
 
       // All contacts should belong to current user
       response.body.data.forEach((contact: any) => {
-        expect(contact.userId).toBe(ufoUserId);
+        expect(contact.ownerUserID).toBe(ufoUserId);
       });
     });
 
@@ -156,7 +156,7 @@ describe('Contact API', () => {
 
       // UFO2 should only see their own contacts
       response.body.data.forEach((contact: any) => {
-        expect(contact.userId).not.toBe(ufoUserId);
+        expect(contact.ownerUserID).not.toBe(ufoUserId);
       });
     });
 
@@ -194,7 +194,9 @@ describe('Contact API', () => {
 
       if (response.body.data.length > 1) {
         for (let i = 1; i < response.body.data.length; i++) {
-          expect(response.body.data[i - 1].lastName.localeCompare(response.body.data[i].lastName)).toBeLessThanOrEqual(0);
+          const prev = response.body.data[i - 1].lastName || '';
+          const curr = response.body.data[i].lastName || '';
+          expect(prev.localeCompare(curr)).toBeLessThanOrEqual(0);
         }
       }
     });
@@ -216,7 +218,7 @@ describe('Contact API', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.contactId).toBe(testContacts.contact1.id);
+      expect(response.body.data.contactID).toBe(testContacts.contact1.id);
       expect(response.body.data.firstName).toBe(testContacts.contact1.firstName);
     });
 
@@ -269,7 +271,7 @@ describe('Contact API', () => {
           email: randomEmail()
         });
 
-      contactId = response.body.data.contactId;
+      contactId = response.body.data.contactID;
     });
 
     it('should update contact', async () => {
@@ -353,7 +355,7 @@ describe('Contact API', () => {
           email: randomEmail()
         });
 
-      contactId = response.body.data.contactId;
+      contactId = response.body.data.contactID;
     });
 
     it('should delete contact', async () => {
@@ -439,7 +441,7 @@ describe('Contact API', () => {
         .expect(200);
 
       response.body.data.forEach((contact: any) => {
-        expect(contact.userId).toBe(ufoUserId);
+        expect(contact.ownerUserID).toBe(ufoUserId);
       });
     });
 
@@ -542,7 +544,7 @@ describe('Contact API', () => {
         .expect(200);
 
       response.body.forEach((contact: any) => {
-        expect(contact.userId).toBe(ufoUserId);
+        expect(contact.ownerUserID).toBe(ufoUserId);
       });
     });
 

@@ -44,12 +44,12 @@ export const newContactData = {
   invalidEmail: {
     firstName: 'Charlie',
     lastName: 'Davis',
-    email: 'notanemail',
-    mobile: '+15553334444'
+    email: 'notanemail'
+    // Invalid email format and no mobile
   },
   missingRequired: {
-    email: 'missing@example.com'
-    // Missing firstName and lastName
+    firstName: 'Test'
+    // Missing both email and mobile (violates "email OR mobile" requirement)
   },
   duplicateEmail: {
     firstName: 'Duplicate',
