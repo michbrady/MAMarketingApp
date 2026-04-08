@@ -28,6 +28,9 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
   - Notes format: `[ISO timestamp] content` with blank line separator
   - File: `frontend/src/lib/api/contacts.ts` - addContactNote()
   - Commits: `f567141`, `7e2c477`
+  - **Follow-up fix**: Notes saved but didn't display - now also invalidates main contact query
+  - File: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
+  - Commits: `e173fee`, `7324307`
 
 - **Documentation**: Created comprehensive field mapping reference
   - File: `FRONTEND_BACKEND_MAPPING_ISSUES.md`

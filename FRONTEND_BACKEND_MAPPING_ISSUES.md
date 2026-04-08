@@ -297,6 +297,22 @@ POST /contacts/:id/notes with { content }
 **Commits**:
 - Frontend: `f567141` - "Fix contact notes: use update endpoint instead of non-existent notes endpoint"
 - Main: `7e2c477` - "Update frontend submodule: fix contact notes 404 error"
+- Frontend: `e173fee` - "Fix notes not displaying after save: invalidate main contact query"
+- Main: `7324307` - "Update frontend submodule: fix notes not displaying after save"
+
+### Follow-up Fix: Notes Not Displaying
+
+**Problem**: Notes saved successfully but didn't appear on screen after save.
+
+**Root cause**: After saving, only `['contact-activity', contactId]` query was invalidated, but notes are displayed from `contact.notes` field which comes from the main `['contact', contactId]` query.
+
+**Solution**: Also invalidate the main contact query after saving notes.
+
+```typescript
+// File: frontend/src/app/(dashboard)/contacts/[id]/page.tsx
+queryClient.invalidateQueries({ queryKey: ['contact', contactId] });        // Added
+queryClient.invalidateQueries({ queryKey: ['contact-activity', contactId] });
+```
 
 ---
 
