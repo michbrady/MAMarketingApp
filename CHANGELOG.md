@@ -50,7 +50,7 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
   - Solution: Moved `useMemo` before any early returns to ensure consistent hook call order
   - File: `frontend/src/app/(dashboard)/contacts/[id]/page.tsx`
   - Follows Rules of Hooks: hooks must be called in same order on every render
-- Commit: `pending`
+- Commits: `efd123a`, `e86a7e5`
 
 #### Frontend/Backend Field Mapping Issues 🔧
 - **Contact Creation Tags Bug**: Fixed `TypeError: .split is not a function` when creating contacts

@@ -467,7 +467,9 @@ if (isLoading) {
 ```
 
 **Fix Date**: April 8, 2026  
-**Commit**: Frontend `pending` - "Fix React Hooks order violation in contact detail page"
+**Commits**:
+- Frontend: `efd123a` - "Fix React Hooks order violation in contact detail page"
+- Main: `e86a7e5` - "Fix React Hooks order violation and update documentation"
 
 ---
 
