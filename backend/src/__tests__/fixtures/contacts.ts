@@ -5,7 +5,7 @@ export const testContacts = {
     firstName: 'John',
     lastName: 'Doe',
     email: 'john.doe@example.com',
-    phone: '+15551234567',
+    mobile: '+15551234567',
     status: 'Active'
   },
   contact2: {
@@ -14,7 +14,7 @@ export const testContacts = {
     firstName: 'Jane',
     lastName: 'Smith',
     email: 'jane.smith@example.com',
-    phone: '+15559876543',
+    mobile: '+15559876543',
     status: 'Active'
   },
   contact3: {
@@ -23,7 +23,7 @@ export const testContacts = {
     firstName: 'Bob',
     lastName: 'Johnson',
     email: 'bob.johnson@example.com',
-    phone: '+15555555555',
+    mobile: '+15555555555',
     status: 'Active'
   }
 };
@@ -33,7 +33,7 @@ export const newContactData = {
     firstName: 'Alice',
     lastName: 'Williams',
     email: 'alice.williams@example.com',
-    phone: '+15551112222',
+    mobile: '+15551112222',
     notes: 'Met at conference'
   },
   minimal: {
@@ -45,7 +45,7 @@ export const newContactData = {
     firstName: 'Charlie',
     lastName: 'Davis',
     email: 'notanemail',
-    phone: '+15553334444'
+    mobile: '+15553334444'
   },
   missingRequired: {
     email: 'missing@example.com'
@@ -64,19 +64,19 @@ export const contactImportData = {
       firstName: 'Import',
       lastName: 'One',
       email: 'import1@example.com',
-      phone: '+15551111111'
+      mobile: '+15551111111'
     },
     {
       firstName: 'Import',
       lastName: 'Two',
       email: 'import2@example.com',
-      phone: '+15552222222'
+      mobile: '+15552222222'
     },
     {
       firstName: 'Import',
       lastName: 'Three',
       email: 'import3@example.com',
-      phone: '+15553333333'
+      mobile: '+15553333333'
     }
   ],
   withErrors: [

@@ -8,8 +8,8 @@ import { z } from 'zod';
 // Contact status enum
 const contactStatusEnum = z.enum(['Active', 'Inactive', 'DoNotContact', 'Bounced']);
 
-// Phone number regex (basic international format)
-const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+// Phone number regex (flexible format - accepts various formats)
+const phoneRegex = /^[\d\s\-\+\(\)]{10,20}$/;
 
 /**
  * Create Contact Schema
