@@ -15,6 +15,7 @@ import contactRoutes from './routes/contact.routes.js';
 import contactGroupRoutes from './routes/contact-group.routes.js';
 import followupRoutes from './routes/followup.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import localeRoutes from './routes/locale.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -93,6 +94,9 @@ app.use('/api/v1/followups', followupRoutes);
 
 // Admin routes
 app.use('/api/v1/admin', adminRoutes);
+
+// Locale routes
+app.use('/api/v1/locales', localeRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

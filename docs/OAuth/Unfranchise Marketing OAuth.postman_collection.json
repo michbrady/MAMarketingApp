@@ -1,0 +1,619 @@
+{
+  "info": {
+    "_postman_id": "80d19b60-716f-4dd2-a783-1b4a7009313f",
+    "name": "Unfranchise Marketing OAuth",
+    "description": "# Unfranchise Marketing OAuth Collection\n\nThis collection contains OAuth token and an example API Manager endpoint of the search-redirect server for 3 environments: **Dev**, **Staging**, and **Production**.\n\n---\n\n## OAuth Flow Overview\n\nThe full token lifecycle for building an application:\n\n1. **Authenticate** — `POST /oauth2/token` with `grant_type=password`, `client_id`, `username`, and `password` to obtain an `access_token` and `refresh_token`.\n2. **Use the token** — Pass the token in the `Authorization` header as `bearer <access_token>` on protected API endpoints.\n3. **Check token status** — `GET /oauth2/tokeninfo?access_token=<token>` to inspect expiration and user info.\n4. **Refresh the token** — `POST /oauth2/token` with `grant_type=refresh_token`, `refresh_token`, and `client_id` to get a new `access_token` without re-authenticating.\n\n---\n\n## Environment Base URLs\n\n| Environment | Base URL |\n|---|---|\n| Dev | `https://devoauthapi.mashop.com` |\n| Staging | `https://stagingoauthapi.mashop.com` |\n| Production | `https://oauthapi-gso.mashop.com` |\n\n---\n\n## Request & Response Reference\n\n### POST /oauth2/token (Password Grant)\n\n**Request body** (x-www-form-urlencoded):\n- `grant_type` = `password`\n- `client_id` = your application's client ID\n- `username` = the user's ID\n- `password` = the user's password\n\n**Response:**\n```json\n{\n    \"access_token\": \"b314fd3b9de617db5773d8b626bd32e2\",\n    \"token_type\": \"bearer\",\n    \"expires_in\": 2592000,\n    \"refresh_token\": \"afda3dd22644bccdf9dd82a51926323c\"\n}\n```\n\n### POST /oauth2/token (Refresh Grant)\n\n**Request body** (x-www-form-urlencoded):\n- `grant_type` = `refresh_token`\n- `refresh_token` = the refresh token from the original authentication\n- `client_id` = your application's client ID\n\n**Response:**\n```json\n{\n    \"access_token\": \"2b2d45b66b69ec1589791546058a8b2\",\n    \"token_type\": \"bearer\",\n    \"expires_in\": 2592000\n}\n```\n\n**Note:** The refresh response does **not** return a new `refresh_token`. Your application must hold onto the original `refresh_token` from the password grant and reuse it for future refreshes.\n\n### GET /oauth2/tokeninfo\n\n**Query parameter:** `access_token=<token>`\n\n**Response:**\n```json\n{\n    \"accessToken\": \"396e6a91e17e818310f4e158272ccf0\",\n    \"tokenType\": \"bearer\",\n    \"issuedAt\": 1775683148,\n    \"expiresIn\": 2591992,\n    \"approvedScopes\": [],\n    \"userInfo\": {\n        \"uniqueId\": \"0001010\",\n        \"userName\": \"0001010\",\n        \"firstName\": \"\",\n        \"lastName\": \"\",\n        \"accountEnabled\": true,\n        \"organizationName\": \"default\",\n        \"attribtues\": {}\n    },\n    \"audience\": \"f7ed7c9495b84272913f9953a570544a\",\n    \"properties\": {\n        \"ufoid\": \"555555555\"\n    }\n}\n```\n\n### Using the Token on Protected Endpoints\n\nPass the `access_token` in the `Authorization` header:\n```\nAuthorization: bearer <access_token>\n```\n\nSee the `search-redirect-oauth` request in each folder for an example.\n\n---\n\n## Token Expiration & Refresh Strategy\n\n- Access tokens expire after **30 days** (2,592,000 seconds).\n- Refreshed tokens also last **30 days**.\n- Use the **Token Info** endpoint to check remaining time via the `expiresIn` field.\n- Your application should store the `refresh_token` from the initial authentication and use it to refresh before the `access_token` expires.\n\n---\n\n## How to Use This Postman Collection\n\n1. **Import** this collection into Postman.\n2. **Open** the folder for the environment you want to test (Dev, Staging, or Production).\n3. **Run the \"oAuth Token\" request first.** This authenticates and automatically saves the `access_token` and `refresh_token` as collection variables.\n4. **Run the \"search-redirect-oauth\" request.** It automatically uses the token from step 3 in the Authorization header.\n5. **Run \"Token Info\"** to inspect the current token's expiration and user details.\n6. **Run \"Refresh Token\"** to get a new access token without re-authenticating.\n\n### Using the Collection Runner\n\nYou can also run an entire folder at once using Postman's **Collection Runner**:\n\n- Right-click the folder (e.g., Dev) and select **Run folder**.\n- The requests execute in order and tokens are passed automatically between requests.\n\n---\n\n## Important Notes\n\n- The username, password, and client_id are hardcoded test user values for consistency in Postman, but your application will need to dynamically pass in the username and password.\n- The `access_token` and `refresh_token` are stored as **collection variables** and are automatically set each time you run the token request.\n- No Postman environment variables are needed — everything is self-contained in this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "906847",
+    "_collection_link": "https://go.postman.co/collection/906847-80d19b60-716f-4dd2-a783-1b4a7009313f?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Dev",
+      "item": [
+        {
+          "name": "oAuth Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "f7ed7c9495b84272913f9953a570544a",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "0001010",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "Ma8181811",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://devoauthapi.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "devoauthapi",
+                "shop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "search-redirect-oauth",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json;v=1"
+              },
+              {
+                "key": "authorization",
+                "value": "bearer {{access_token}}"
+              },
+              {
+                "key": "ufoid",
+                "value": "555555555"
+              }
+            ],
+            "url": {
+              "raw": "https://devoauthapi.mashop.com/search-redirect-oauth/v1/redirect?siteType=U&prdCountry=USA&keyword=form1000",
+              "protocol": "https",
+              "host": [
+                "devoauthapi",
+                "shop",
+                "com"
+              ],
+              "path": [
+                "search-redirect-oauth",
+                "v1",
+                "redirect"
+              ],
+              "query": [
+                {
+                  "key": "siteType",
+                  "value": "U"
+                },
+                {
+                  "key": "prdCountry",
+                  "value": "USA"
+                },
+                {
+                  "key": "keyword",
+                  "value": "form1000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://devoauthapi.mashop.com/oauth2/tokeninfo?access_token={{access_token}}",
+              "protocol": "https",
+              "host": [
+                "devoauthapi",
+                "shop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "tokeninfo"
+              ],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "{{access_token}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "f7ed7c9495b84272913f9953a570544a",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://devoauthapi.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "devoauthapi",
+                "shop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staging",
+      "item": [
+        {
+          "name": "oAuth Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "59d9fc84b8dc443ea3d168d3b7e95ddf",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "0001010",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "Ma8181811",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://stagingoauthapi.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "stagingoauthapi",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "search-redirect-oauth",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json;v=1"
+              },
+              {
+                "key": "authorization",
+                "value": "bearer {{access_token}}"
+              },
+              {
+                "key": "ufoid",
+                "value": "555555555"
+              }
+            ],
+            "url": {
+              "raw": "https://stagingoauthapi.mashop.com/search-redirect-oauth/v1/redirect?siteType=U&prdCountry=USA&keyword=form1000",
+              "protocol": "https",
+              "host": [
+                "stagingoauthapi",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "search-redirect-oauth",
+                "v1",
+                "redirect"
+              ],
+              "query": [
+                {
+                  "key": "siteType",
+                  "value": "U"
+                },
+                {
+                  "key": "prdCountry",
+                  "value": "USA"
+                },
+                {
+                  "key": "keyword",
+                  "value": "form1000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://stagingoauthapi.mashop.com/oauth2/tokeninfo?access_token={{access_token}}",
+              "protocol": "https",
+              "host": [
+                "stagingoauthapi",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "tokeninfo"
+              ],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "{{access_token}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "59d9fc84b8dc443ea3d168d3b7e95ddf",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://stagingoauthapi.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "stagingoauthapi",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Production",
+      "item": [
+        {
+          "name": "oAuth Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "fb50bf026c66494295e1fd4771689c69",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "0001010",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "Ma8181811",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://oauthapi-gso.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "oauthapi-gso",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "search-redirect-oauth",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "accept",
+                "value": "application/json;v=1"
+              },
+              {
+                "key": "authorization",
+                "value": "bearer {{access_token}}"
+              },
+              {
+                "key": "ufoid",
+                "value": "555555555"
+              }
+            ],
+            "url": {
+              "raw": "https://oauthapi-gso.mashop.com/search-redirect-oauth/v1/redirect?siteType=U&prdCountry=USA&keyword=form1000",
+              "protocol": "https",
+              "host": [
+                "oauthapi-gso",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "search-redirect-oauth",
+                "v1",
+                "redirect"
+              ],
+              "query": [
+                {
+                  "key": "siteType",
+                  "value": "U"
+                },
+                {
+                  "key": "prdCountry",
+                  "value": "USA"
+                },
+                {
+                  "key": "keyword",
+                  "value": "form1000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://oauthapi-gso.mashop.com/oauth2/tokeninfo?access_token={{access_token}}",
+              "protocol": "https",
+              "host": [
+                "oauthapi-gso",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "tokeninfo"
+              ],
+              "query": [
+                {
+                  "key": "access_token",
+                  "value": "{{access_token}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token",
+                  "type": "text"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "fb50bf026c66494295e1fd4771689c69",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://oauthapi-gso.mashop.com/oauth2/token",
+              "protocol": "https",
+              "host": [
+                "oauthapi-gso",
+                "mashop",
+                "com"
+              ],
+              "path": [
+                "oauth2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    }
+  ]
+}

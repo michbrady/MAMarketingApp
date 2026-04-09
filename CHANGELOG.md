@@ -4,6 +4,69 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
 
 ## [Unreleased]
 
+### Added - April 9, 2026
+
+#### Multi-Country/Multi-Language (i18n) Support - Phase 1 Foundation 🌍 NEW!
+
+**Database Layer** ✅ COMPLETE
+- **New Tables Created**:
+  - `MarketLanguage` - Junction table mapping which languages available per market (19 mappings)
+  - `TranslationString` - Admin-manageable UI translations (complement to JSON files)
+  - `ContentTranslationGroup` - Links master content to translated versions
+- **Schema Updates**:
+  - `Language` table: Added `LocaleCode` (BCP 47), `FallbackLanguageID`, `Direction`, `PluralRules`
+  - `User` table: Added `PreferredLocale` column
+- **16 Language Variants**: en-US, en-CA, en-GB, en-AU, en-SG, en-HK, en-TW, en-MY, en-ID, zh-TW, zh-HK, zh-Hans, id-ID, ms-MY, fr-CA, es-MX
+- **10 Markets Configured**: USA, Canada, UK, Australia, Taiwan, China, Singapore, Hong Kong, Malaysia, Indonesia
+- **Files**: `database/12_Schema_Localization.sql`, `database/13_Seed_Localization_Data.sql`
+
+**Backend Layer** ✅ COMPLETE
+- **New Services**:
+  - `LocaleService` - Core locale business logic with BCP 47 mapping
+  - Methods: `getMarketLocales()`, `validateMarketLocale()`, `getDefaultLocale()`, `mapServiceCodeToLocale()`
+- **New API Endpoints**:
+  - `GET /api/v1/locales/markets/:marketCode` - Get available locales for market
+  - `PUT /api/v1/locales/user` - Update user's preferred locale
+- **Auth Updates**:
+  - Login accepts optional `countryCode` and `languageCode` parameters
+  - Maps service codes (ENG, CHI, IDN, MSA) to BCP 47 locale codes (en-US, zh-TW, id-ID, ms-MY)
+  - Locale included in JWT payload and auth responses
+  - Auto-updates user's PreferredLocale on first login
+- **Files Created**: `backend/src/services/locale.service.ts`, `backend/src/controllers/locale.controller.ts`, `backend/src/routes/locale.routes.ts`, `backend/src/types/locale.types.ts`
+- **Files Updated**: `backend/src/services/auth.service.ts`, `backend/src/controllers/auth.controller.ts`, `backend/src/middleware/auth.middleware.ts`, `backend/src/index.ts`
+
+**Frontend Layer** ✅ COMPLETE
+- **next-intl Library**: Installed and configured for Next.js 15 App Router
+- **i18n Infrastructure**:
+  - `src/i18n/request.ts` - Server configuration with 9 supported locales
+  - `src/i18n/routing.ts` - Locale-aware navigation helpers (Link, Router, etc.)
+  - `src/middleware.ts` - Automatic locale detection and URL rewriting
+- **App Structure Restructured**: All routes moved from `app/*` to `app/[locale]/*`
+  - URLs now require locale prefix: `/en-US/dashboard`, `/zh-TW/content`, `/id-ID/contacts`
+- **LocaleSwitcher Component**: Globe icon dropdown showing available locales for user's market
+- **Translation Files Created**: 9 locale files in `frontend/messages/`
+  - Complete: en-US, zh-TW, id-ID
+  - Stubs: en-CA, en-GB, en-AU, zh-HK, zh-Hans, ms-MY
+- **Locale Constants**: `src/lib/locales.ts` with locale metadata, flag emojis, market mappings
+- **Auth Store Enhanced**: Added `locale` and `market` to User interface, added `updateUserLocale()` method
+- **API Client Extended**: New `src/lib/api/users.ts` with `updateUserLocale()` endpoint
+- **Files Created**: 13 new files (i18n config, LocaleSwitcher, translation files, locale constants, etc.)
+- **Files Updated**: `next.config.ts`, `src/app/layout.tsx`, `src/store/authStore.ts`, test files
+
+**Architecture & Documentation**:
+- `docs/I18N_ARCHITECTURE_PLAN.md` - Complete 13-week implementation plan
+- `docs/I18N_FRONTEND_IMPLEMENTATION.md` - Frontend usage guide
+- `docs/I18N_BACKEND_IMPLEMENTATION.md` - Backend implementation details
+- `docs/I18N_DIRECTORY_STRUCTURE.md` - Directory structure reference
+
+**Status**: Phase 1 (Foundation) complete. Phase 2 (Component Migration) pending.
+
+**Next Steps**:
+1. Use `start.bat` to start frontend and backend
+2. Test locale switcher and API endpoints
+3. Begin migrating components to use `useTranslations()` hook
+4. Professional translation review for zh-TW and id-ID
+
 ### Added - April 8, 2026
 
 #### Timezone-Aware Timestamp Display ✨ NEW!

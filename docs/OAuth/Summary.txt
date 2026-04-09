@@ -1,0 +1,5 @@
+In this directory is a json - Postman collection optimized for Claude Code and Postman collection running. It's got all the documentation baked in for the OAuth flow.  One thing to note. The token last 30-days but you can check and refresh it for another 30-days.
+
+Claude Code: Drop this in your project folder and do a @Unfranchise Marketing OAuth.postman_collection.json so Claude references it to see full request/response examples.
+
+Claude code please do this: Run Postman: Import it into Postman and run any environment folder top to bottom; the tokens pass between requests automatically.  

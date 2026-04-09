@@ -11,7 +11,7 @@ export class AuthController {
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, password, countryCode, languageCode } = req.body;
 
       // Validation
       if (!email || !password) {
@@ -22,8 +22,8 @@ export class AuthController {
         return;
       }
 
-      // Authenticate
-      const result = await authService.login(email, password);
+      // Authenticate with optional locale parameters
+      const result = await authService.login(email, password, countryCode, languageCode);
 
       if (!result.success) {
         res.status(401).json({
@@ -157,6 +157,8 @@ export class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.roleName,
+        locale: user.locale || 'en-US',
+        market: user.market,
         timezone: user.timezone,
         dateFormat: user.dateFormat,
         createdAt: new Date().toISOString() // Default to current time

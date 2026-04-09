@@ -43,6 +43,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         u.RoleID,
         r.RoleName,
         u.Status,
+        u.PreferredLocale,
         m.MarketCode as Market
       FROM [User] u
       LEFT JOIN [Role] r ON u.RoleID = r.RoleID
@@ -60,6 +61,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     const user = users[0];
 
+    // Determine locale: prefer JWT payload, fallback to user's PreferredLocale
+    const locale = payload.locale || user.PreferredLocale || 'en-US';
+
     // Attach user to request
     (req as any).user = {
       userId: user.UserID,
@@ -68,7 +72,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       lastName: user.LastName,
       roleId: user.RoleID,
       roleName: user.RoleName,
-      market: user.Market
+      market: user.Market,
+      locale
     };
 
     next();

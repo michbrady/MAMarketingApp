@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database.js';
 import { createLogger } from '../utils/logger.js';
+import localeService from './locale.service.js';
 
 const logger = createLogger('AuthService');
 
@@ -16,6 +17,8 @@ interface User {
   Status: string;
   TimeZone?: string;
   Market?: string;
+  PreferredLocale?: string;
+  MarketID?: number;
 }
 
 interface LoginResult {
@@ -28,6 +31,8 @@ interface LoginResult {
     firstName: string;
     lastName: string;
     role: string;
+    locale?: string;
+    market?: string;
   };
   message?: string;
 }
@@ -41,7 +46,12 @@ export class AuthService {
   /**
    * Authenticate user with email and password
    */
-  async login(email: string, password: string): Promise<LoginResult> {
+  async login(
+    email: string,
+    password: string,
+    countryCode?: string,
+    languageCode?: string
+  ): Promise<LoginResult> {
     try {
       logger.info(`Login attempt for: ${email}`);
 
@@ -54,9 +64,11 @@ export class AuthService {
           u.FirstName,
           u.LastName,
           u.RoleID,
+          u.MarketID,
           r.RoleName,
           u.Status,
           u.TimeZone,
+          u.PreferredLocale,
           m.MarketCode as Market
         FROM [User] u
         LEFT JOIN [Role] r ON u.RoleID = r.RoleID
@@ -94,11 +106,40 @@ export class AuthService {
         };
       }
 
-      // Generate tokens
-      const token = this.generateToken(user);
+      // Determine user's locale
+      let locale = user.PreferredLocale;
+
+      // If no preferred locale set, determine from service codes or market default
+      if (!locale) {
+        if (countryCode && languageCode) {
+          // Map service codes to BCP 47 locale
+          locale = localeService.mapServiceCodeToLocale(countryCode, languageCode);
+
+          // Update user's preferred locale in database
+          try {
+            await query(`
+              UPDATE [User]
+              SET PreferredLocale = @locale
+              WHERE UserID = @userId
+            `, { locale, userId: user.UserID });
+            logger.info(`Updated preferred locale for user ${email} to ${locale}`);
+          } catch (error) {
+            logger.error(`Failed to update preferred locale for user ${email}:`, error);
+          }
+        } else if (user.Market) {
+          // Get default locale for user's market
+          locale = await localeService.getDefaultLocale(user.Market);
+        } else {
+          // Fallback to en-US
+          locale = 'en-US';
+        }
+      }
+
+      // Generate tokens with locale
+      const token = this.generateToken(user, locale);
       const refreshToken = this.generateRefreshToken(user);
 
-      logger.info(`Login successful for: ${email}`);
+      logger.info(`Login successful for: ${email} with locale: ${locale}`);
 
       return {
         success: true,
@@ -109,7 +150,9 @@ export class AuthService {
           email: user.Email,
           firstName: user.FirstName,
           lastName: user.LastName,
-          role: user.RoleName || 'UFO'
+          role: user.RoleName || 'UFO',
+          locale,
+          market: user.Market
         }
       };
 
@@ -122,11 +165,12 @@ export class AuthService {
   /**
    * Generate JWT access token
    */
-  private generateToken(user: User): string {
+  private generateToken(user: User, locale?: string): string {
     const payload = {
       userId: user.UserID,
       email: user.Email,
       role: user.RoleID,
+      locale: locale || user.PreferredLocale || 'en-US',
       type: 'access'
     };
 
@@ -190,7 +234,7 @@ export class AuthService {
 
       // Get user
       const users = await query<User>(`
-        SELECT UserID, Email, RoleID, Status
+        SELECT UserID, Email, RoleID, Status, PreferredLocale
         FROM [User]
         WHERE UserID = @userId AND Status = 'Active'
       `, { userId: payload.userId });

@@ -109,7 +109,27 @@
       "Bash(gh auth:*)",
       "Bash(gh repo:*)",
       "Bash(git push:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(find:*)",
+      "Bash(git rm:*)",
+      "Bash(netstat -ano)",
+      "Bash(cmd:*)",
+      "Bash(findstr \"3001\")",
+      "Bash(findstr \"node.exe\")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"3000\\\\|3001\")",
+      "Bash(findstr \":3001\")",
+      "Bash(findstr \":3000\")",
+      "Bash(findstr \":3001\\\\|:3000\")",
+      "Bash(cp en-CA.json en-GB.json)",
+      "Bash(cp en-CA.json en-AU.json)",
+      "Bash(cp zh-TW.json zh-HK.json)",
+      "Bash(cp id-ID.json ms-MY.json)",
+      "Bash(cp zh-TW.json zh-Hans.json)",
+      "Bash(mv \\(auth\\):*)",
+      "Bash(mv '\\(auth\\)' '[locale]/\\(auth\\)')",
+      "Bash(mv '\\(dashboard\\)' '[locale]/\\(dashboard\\)')",
+      "Bash(rm:*)"
     ]
   }
 }
