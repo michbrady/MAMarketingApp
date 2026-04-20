@@ -287,6 +287,25 @@ export class SharingController {
   }
 
   /**
+   * GET /api/v1/share/:trackingCode/preview
+   * Return content metadata for Open Graph tags — no click recorded
+   */
+  async getPreview(req: Request, res: Response): Promise<void> {
+    try {
+      const { trackingCode } = req.params;
+      const result = await sharingService.getPreviewData(trackingCode);
+      if (!result) {
+        res.status(404).json({ success: false, message: 'Tracking link not found' });
+        return;
+      }
+      res.json({ success: true, data: result });
+    } catch (error) {
+      logger.error('Error fetching preview data:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch preview' });
+    }
+  }
+
+  /**
    * Helper method to determine device type from user agent
    */
   private getDeviceType(userAgent: string): string {

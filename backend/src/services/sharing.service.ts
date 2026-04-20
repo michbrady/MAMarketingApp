@@ -224,6 +224,7 @@ export class SharingService {
           trackingCode,
           contentId: shareData.contentItemId.toString(),
           channel: shareData.channel,
+          socialPlatform: shareData.socialPlatform || null,
           recipientInfo: shareData.recipients?.[0]?.email || shareData.recipients?.[0]?.mobile || shareData.recipients?.[0]?.name || 'Social Share',
           messageContent: shareData.personalMessage,
           createdAt: new Date().toISOString()
@@ -737,6 +738,45 @@ Best regards,
     else if (ua.includes('opera')) browser = 'Opera';
 
     return { deviceType, os, browser };
+  }
+
+  /**
+   * Return content metadata for Open Graph preview — no click recorded
+   */
+  async getPreviewData(trackingCode: string): Promise<{
+    title: string;
+    description: string | null;
+    imageUrl: string | null;
+    destinationUrl: string;
+  } | null> {
+    try {
+      const rows = await query<{
+        Title: string;
+        Description: string | null;
+        ThumbnailURL: string | null;
+        DestinationURL: string | null;
+      }>(`
+        SELECT ci.Title, ci.Description, ci.ThumbnailURL, tl.DestinationURL
+        FROM TrackingLink tl
+        INNER JOIN ShareEvent se ON tl.ShareEventID = se.ShareEventID
+        INNER JOIN ContentItem ci ON se.ContentItemID = ci.ContentItemID
+        WHERE tl.ShortCode = @trackingCode AND tl.IsActive = 1
+      `, { trackingCode });
+
+      if (rows.length === 0) return null;
+
+      const row = rows[0];
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      return {
+        title: row.Title,
+        description: row.Description,
+        imageUrl: row.ThumbnailURL,
+        destinationUrl: row.DestinationURL || frontendUrl,
+      };
+    } catch (error) {
+      logger.error('Error fetching preview data:', error);
+      throw error;
+    }
   }
 }
 
