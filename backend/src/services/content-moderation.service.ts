@@ -198,13 +198,18 @@ export class ContentModerationService {
       logger.info(`Featuring content: ${contentId}`);
 
       const results = await query<any>(`
-        EXEC usp_FeatureContent
-          @ContentItemID = @contentId,
-          @FeaturedBy = @featuredBy
-      `, {
-        contentId,
-        featuredBy
-      });
+        UPDATE ContentItem
+        SET IsFeatured = 1,
+            UpdatedBy = @featuredBy,
+            UpdatedDate = SYSDATETIME()
+        OUTPUT
+          INSERTED.ContentItemID,
+          INSERTED.Title,
+          INSERTED.IsFeatured,
+          INSERTED.UpdatedBy AS FeaturedBy,
+          INSERTED.UpdatedDate AS FeaturedDate
+        WHERE ContentItemID = @contentId
+      `, { contentId, featuredBy });
 
       if (results.length === 0) {
         throw new Error('Content not found');
@@ -230,16 +235,21 @@ export class ContentModerationService {
   /**
    * Unfeature content
    */
-  async unfeatureContent(contentId: number, _unfeaturedBy: number): Promise<Content> {
+  async unfeatureContent(contentId: number, unfeaturedBy: number): Promise<Content> {
     try {
       logger.info(`Unfeaturing content: ${contentId}`);
 
       const results = await query<any>(`
-        EXEC usp_UnfeatureContent
-          @ContentItemID = @contentId
-      `, {
-        contentId
-      });
+        UPDATE ContentItem
+        SET IsFeatured = 0,
+            UpdatedBy = @unfeaturedBy,
+            UpdatedDate = SYSDATETIME()
+        OUTPUT
+          INSERTED.ContentItemID,
+          INSERTED.Title,
+          INSERTED.IsFeatured
+        WHERE ContentItemID = @contentId
+      `, { contentId, unfeaturedBy });
 
       if (results.length === 0) {
         throw new Error('Content not found');
