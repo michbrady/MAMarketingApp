@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Microsoft SQL Server
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: unfranchise-sqlserver
@@ -13,17 +12,15 @@ services:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
-      - ./database:/docker-entrypoint-initdb.d
     networks:
       - unfranchise-network
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong@Password123 -Q "SELECT 1" -C || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Password123" -Q "SELECT 1" -C || exit 1
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 10
       start_period: 30s
 
-  # Redis
   redis:
     image: redis:7-alpine
     container_name: unfranchise-redis
@@ -40,27 +37,29 @@ services:
       timeout: 3s
       retries: 5
 
-  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: builder
     container_name: unfranchise-backend
+    env_file:
+      - ./backend/.env
     environment:
       - NODE_ENV=development
-      - PORT=3001
       - DB_HOST=sqlserver
       - DB_PORT=1433
       - DB_USER=sa
       - DB_PASSWORD=YourStrong@Password123
-      - DB_NAME=unfranchise_marketing
+      - DB_NAME=UnFranchiseMarketing
+      - DB_TRUST_SERVER_CERTIFICATE=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - FRONTEND_URL=http://localhost:3000
     ports:
       - "3001:3001"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend/src:/app/src
     networks:
       - unfranchise-network
     depends_on:
@@ -70,11 +69,11 @@ services:
         condition: service_healthy
     command: npm run dev
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: deps
     container_name: unfranchise-frontend
     environment:
       - NODE_ENV=development
@@ -82,9 +81,9 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - ./frontend/src:/app/src
+      - ./frontend/messages:/app/messages
+      - ./frontend/public:/app/public
     networks:
       - unfranchise-network
     depends_on:

@@ -23,6 +23,15 @@ router.get('/:trackingCode/track', (req, res) => {
 });
 
 /**
+ * @route   GET /api/v1/share/:trackingCode/preview
+ * @desc    Return content metadata for Open Graph tags (no click recorded)
+ * @access  Public
+ */
+router.get('/:trackingCode/preview', (req, res) => {
+  sharingController.getPreview(req, res);
+});
+
+/**
  * @route   GET /api/v1/share/history
  * @desc    Get user's share history
  * @access  Protected

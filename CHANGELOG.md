@@ -4,6 +4,67 @@ All notable changes, features, and bug fixes to the UnFranchise Marketing App.
 
 ## [Unreleased]
 
+### Changed - April 20, 2026
+
+#### Content Sharing Flow Redesign & Admin Bug Fixes
+
+**Sharing Flow (UFO-facing)**
+- `ShareModal.tsx` — complete rewrite: 3-step wizard (Social Media, Send to Contact, Copy Link) replacing the previous flat channel list; history-based back navigation; template variable substitution (`{firstName}`, `{contentTitle}`, `{recipientName}`, etc.) using logged-in user profile
+- New components: `SocialComposeStep.tsx`, `ContactSelectStep.tsx`, `ContactShareOptionsStep.tsx`, `ShareSuccess.tsx`
+- `MediaViewer.tsx` — YouTube and Vimeo URLs now render via `<iframe>` embed instead of failing `<video>` tag
+- `ContentCard.tsx` — Download button added for non-video content; uses `fetch` + blob URL to force file save rather than opening in new tab; videos excluded from download
+- `ContentDetail.tsx` — Download button added to detail view
+
+**Admin — Content Moderation Bug Fixes**
+- `content-moderation.service.ts` — replaced three broken stored procedure calls (`usp_ApproveContent`, `usp_FeatureContent`, `usp_UnfeatureContent`) that referenced a non-existent `Content` table with direct `UPDATE ContentItem` statements using `OUTPUT` clauses
+- `admin/content/page.tsx` — fixed Approve/Reject buttons never appearing: status check was `'Pending'` but DB uses `'Review'`
+- `admin/content/new/page.tsx` + `admin/content/[id]/edit/page.tsx` — removed Sharing Options section (SMS/Email/Social/PersonalNote checkboxes); SMS is now always `false`, other options always `true`
+
+---
+
+### Changed - April 14, 2026
+
+#### Authentication Redesign — ReportingDB Validation 🔐
+
+Replaced local password-based UFO authentication with read-only validation against the existing UnFranchise `ReportingDB`. UFO profile data is now sourced directly from the authoritative database at login rather than bulk-imported or synced. Passwords and profile updates remain on UnFranchise.com.
+
+**New login flow:**
+- UFO enters Member ID → backend queries `DistributorStatus_activity` on `ReportingDB` via `SSRSReader` service account
+- Valid if `(ActiveUFMS = 1 AND DistStatus = 1) OR FoundersFlag = 'P'`
+- Local `[User]` record is created on first login and updated on each subsequent login (MERGE keyed on `MemberID`)
+- JWT issued as before — no other app behaviour changes
+- Admin login (email + password against local DB) is unchanged
+
+**Backend — new/changed:**
+- `config/unfranchise-db.ts` — new read-only connection pool to `ReportingDB` (env: `UNFRANCHISE_DB_*`)
+- `services/auth.service.ts` — `login()` dispatches on `memberId` (UFO) vs `email+password` (admin); `upsertLocalUser()` handles MERGE
+- `controllers/auth.controller.ts` — OAuth endpoints removed; single `/login` handles both paths
+- `routes/auth.routes.ts` — simplified to 4 routes (login, refresh, logout, me)
+- `middleware/auth.middleware.ts` — JWT-only; OAuth fallback removed
+- `controllers/users.controller.ts` + `services/users.service.ts` — `updateProfile` and `updatePassword` removed; notifications and preferences remain
+- `routes/users.routes.ts` — `/profile` and `/password` routes removed
+- `queues/index.ts` — OAuth refresh queue and user-sync queue removed
+- `config/scheduler.ts` — user-sync scheduler removed
+
+**Backend — deleted:**
+- `services/oauth.service.ts`, `config/oauth.config.ts`, `routes/oauth.routes.ts`
+- `config/launchpad-database.ts` (replaced by `unfranchise-db.ts`)
+- `services/user-sync.service.ts`, `controllers/user-sync.controller.ts`, `routes/user-sync.routes.ts`
+- `queues/oauth-refresh.queue.ts`, `jobs/oauth-token-refresh.job.ts`, `jobs/user-sync.job.ts`, `workers/user-sync.worker.ts`
+
+**Frontend — changed:**
+- `components/auth/OAuthLoginForm.tsx` — now a single Member ID field; calls `POST /auth/login` with `{ memberId }`; uses `setAuth` (not `setOAuthAuth`)
+- `store/authStore.ts` — removed `setOAuthAuth`, `refreshOAuthToken`, `authMethod`, `expiresAt`; simplified to JWT-only state
+- `lib/api/client.ts` — removed OAuth token refresh interceptor; 401 now triggers immediate logout
+
+**Database:**
+- `database/23_UFO_Auth_Redesign.sql` — adds `DisplayName`, `ChineseFirstName/LastName`, `PinyinFirstName/LastName`, `PinLevelCode/Description`, `FoundersFlag` columns; nulls UFO password fields; column drop statements provided but commented out (run manually after verifying no admin accounts use them)
+
+**Environment — updated `.env.example`:**
+- Added `UNFRANCHISE_DB_*` variables; removed `LAUNCHPAD_DB_*`, `SOURCE_DB_*`, `OAUTH_*`
+
+---
+
 ### Added - April 9, 2026
 
 #### Multi-Country/Multi-Language (i18n) Support - Phase 1 Foundation 🌍 NEW!

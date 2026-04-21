@@ -1,21 +1,27 @@
-FROM node:20-alpine
-
+# ---- build stage ----
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
-
-# Build TypeScript
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
-# Expose port
-EXPOSE 3001
+# ---- runtime stage ----
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-# Start application
-CMD ["npm", "start"]
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
